@@ -9,6 +9,7 @@ import MainView from '@/components/main-view';
 export default function Home() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfText, setPdfText] = useState<string | null>(null);
+  const [pdfDataUri, setPdfDataUri] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
@@ -29,8 +30,8 @@ export default function Home() {
 
     fileReader.onload = async () => {
       try {
-        const pdfDataUri = fileReader.result as string;
-        const result = await processPdf({ pdfDataUri });
+        const dataUri = fileReader.result as string;
+        const result = await processPdf({ pdfDataUri: dataUri });
 
         if (result.error || !result.text) {
           toast({ title: "Error Processing PDF", description: result.error || "Could not extract text from PDF.", variant: 'destructive' });
@@ -38,6 +39,7 @@ export default function Home() {
         } else {
           setPdfText(result.text);
           setPdfFile(file);
+          setPdfDataUri(dataUri);
           // isProcessing will be set to false inside MainView after the PDF is rendered
         }
       } catch (e) {
@@ -52,9 +54,9 @@ export default function Home() {
     };
   };
 
-  if (!pdfFile || !pdfText) {
+  if (!pdfFile || !pdfText || !pdfDataUri) {
     return <UploadView onUpload={handlePdfUpload} isProcessing={isProcessing} />;
   }
 
-  return <MainView pdfFile={pdfFile} pdfText={pdfText} stopProcessing={() => setIsProcessing(false)} />;
+  return <MainView pdfFile={pdfFile} pdfText={pdfText} pdfDataUri={pdfDataUri} stopProcessing={() => setIsProcessing(false)} />;
 }

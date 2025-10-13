@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, type FormEvent, type DragEvent } from 'react';
+import { useState, type FormEvent, type DragEvent, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, FileUp, CheckCircle2, Bot, ScanText, BrainCircuit, Sparkles } from 'lucide-react';
+import { Loader2, FileUp, CheckCircle2, Bot, ScanText, BrainCircuit, Sparkles, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,7 +17,7 @@ const processingSteps = [
   { text: 'Analyzing document structure...', icon: ScanText },
   { text: 'Extracting content and visuals...', icon: Sparkles },
   { text: 'Building semantic understanding...', icon: BrainCircuit },
-  { text: 'Finalizing...', icon: Bot },
+  { text: 'Preparing the interactive session...', icon: Bot },
 ];
 
 export default function UploadView({ onUpload, isProcessing }: UploadViewProps) {
@@ -38,11 +38,10 @@ export default function UploadView({ onUpload, isProcessing }: UploadViewProps) 
           clearInterval(interval);
           return prevStep;
         });
-      }, 2000); // Change step every 2 seconds
+      }, 1500); // Faster step change
     }
     return () => clearInterval(interval);
   }, [isProcessing]);
-
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -106,31 +105,39 @@ export default function UploadView({ onUpload, isProcessing }: UploadViewProps) 
   };
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="w-full max-w-2xl">
-        <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold tracking-tighter text-gray-900 dark:text-gray-50">
+    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background overflow-hidden">
+      <div className="absolute inset-0 -z-10 h-full w-full bg-background bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]"></div>
+      <div className="absolute top-0 z-[-2] h-screen w-screen bg-[radial-gradient(100%_50%_at_50%_0%,rgba(0,163,255,0.13)_0,rgba(0,163,255,0)_50%,rgba(0,163,255,0)_100%)]"></div>
+      
+      <div className="w-full max-w-2xl px-4">
+        <div className="text-center mb-10">
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-gray-200 to-gray-500">
               PDF Chat Navigator
             </h1>
-            <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">
-              Your personal AI assistant for PDF documents.
+            <p className="mt-4 text-lg text-gray-400 max-w-xl mx-auto">
+              Unlock the knowledge within your documents. Upload a PDF and start an intelligent conversation.
             </p>
         </div>
-        <Card className="shadow-lg border-none bg-white dark:bg-gray-950/50 backdrop-blur-sm transition-all duration-500">
+
+        <Card className="border-white/10 bg-white/5 backdrop-blur-2xl shadow-2xl shadow-blue-500/10 rounded-2xl">
           <CardContent className="p-8">
             {isProcessing ? (
-               <div className="flex flex-col items-center justify-center h-64 space-y-6">
+               <div className="flex flex-col items-center justify-center h-64 space-y-6 transition-all duration-500">
                 <div className="relative">
-                    <Bot className="w-16 h-16 text-primary animate-pulse" />
-                    <Sparkles className="w-6 h-6 text-accent absolute -top-2 -right-2 animate-ping" />
-                </div>
-                 <div className="w-full max-w-sm">
-                    <div className="flex justify-between mb-1 text-sm font-medium text-gray-600 dark:text-gray-300">
-                      <span>{processingSteps[currentStep].text}</span>
-                      <span>{Math.round(((currentStep + 1) / processingSteps.length) * 100)}%</span>
+                    <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <Bot className="w-12 h-12 text-blue-400 animate-pulse" />
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                      <div className="bg-primary h-2.5 rounded-full transition-all duration-1000 ease-out" style={{ width: `${((currentStep + 1) / processingSteps.length) * 100}%` }}></div>
+                </div>
+                 <div className="w-full max-w-md text-center">
+                    <div className="h-6 overflow-hidden">
+                        {processingSteps.map((step, index) => (
+                           <div key={step.text} className={cn("transition-transform duration-500 ease-in-out", currentStep === index ? 'translate-y-0' : '-translate-y-full')}>
+                             {currentStep === index && <p className="text-lg text-gray-300 flex items-center justify-center gap-2"><step.icon className="w-5 h-5 animate-pulse" /> {step.text}</p>}
+                           </div>
+                        ))}
+                    </div>
+                    <div className="w-full bg-white/5 rounded-full h-1.5 mt-4">
+                      <div className="bg-blue-500 h-1.5 rounded-full transition-all duration-1000 ease-out" style={{ width: `${((currentStep + 1) / processingSteps.length) * 100}%` }}></div>
                     </div>
                  </div>
                </div>
@@ -139,8 +146,8 @@ export default function UploadView({ onUpload, isProcessing }: UploadViewProps) 
                 <div
                   className={cn(
                     "relative flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-300 ease-in-out",
-                    isDragging ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-700 hover:border-primary/50 dark:hover:border-primary/50",
-                    {"bg-primary/5 dark:bg-primary/10": file}
+                    isDragging ? "border-blue-400 bg-blue-500/10 scale-105" : "border-white/10 hover:border-blue-400/50",
+                    {"bg-blue-500/5 border-blue-400": file}
                   )}
                   onDragEnter={handleDragEnter}
                   onDragOver={handleDragOver}
@@ -148,18 +155,18 @@ export default function UploadView({ onUpload, isProcessing }: UploadViewProps) 
                   onDrop={handleDrop}
                 >
                   {!file ? (
-                    <div className="text-center">
-                      <FileUp className="mx-auto w-12 h-12 text-gray-400 dark:text-gray-500 mb-3" />
-                      <p className="text-gray-500 dark:text-gray-400">
-                        <span className="font-semibold text-primary">Click to upload</span> or drag and drop
+                    <div className="text-center transition-opacity duration-300">
+                      <FileUp className="mx-auto w-12 h-12 text-gray-500 mb-3" />
+                      <p className="text-gray-400">
+                        <span className="font-semibold text-blue-400">Click to upload</span> or drag and drop
                       </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">PDF only (max. 50MB)</p>
+                      <p className="text-xs text-gray-500 mt-1">PDF only (max. 50MB)</p>
                     </div>
                   ) : (
-                    <div className="text-center p-4">
-                       <CheckCircle2 className="mx-auto w-12 h-12 text-green-500 mb-3" />
-                       <p className="font-semibold text-gray-700 dark:text-gray-200">{file.name}</p>
-                       <p className="text-sm text-gray-500 dark:text-gray-400">{Math.round(file.size / 1024)} KB</p>
+                    <div className="text-center p-4 transition-opacity duration-300">
+                       <CheckCircle2 className="mx-auto w-12 h-12 text-green-400 mb-3" />
+                       <p className="font-semibold text-gray-200">{file.name}</p>
+                       <p className="text-sm text-gray-400">{Math.round(file.size / 1024)} KB</p>
                     </div>
                   )}
                   <Input
@@ -172,13 +179,18 @@ export default function UploadView({ onUpload, isProcessing }: UploadViewProps) 
                   />
                 </div>
 
-                <Button type="submit" size="lg" className="w-full text-base font-semibold" disabled={!file}>
+                <Button type="submit" size="lg" className="w-full text-base font-semibold group bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg transition-transform duration-200 ease-in-out hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100" disabled={!file || isProcessing}>
                     Start Chatting
+                    <ArrowRight className="w-5 h-5 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
                 </Button>
               </form>
             )}
           </CardContent>
         </Card>
+
+        <footer className="text-center mt-10">
+          <p className="text-gray-500 text-sm">Powered by GenAI</p>
+        </footer>
       </div>
     </main>
   );

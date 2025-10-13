@@ -10,18 +10,18 @@ interface PdfViewerProps {
 const PdfViewer = forwardRef<HTMLIFrameElement, PdfViewerProps>(({ fileUrl }, ref) => {
   if (!fileUrl) {
     return (
-      <div className="w-full h-full p-4">
-        <Skeleton className="w-full h-full rounded-lg" />
+      <div className="w-full h-full p-4 bg-secondary/20">
+        <Skeleton className="w-full h-full rounded-lg bg-secondary/50" />
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full bg-gray-100 dark:bg-gray-800 p-2">
+    <div className="w-full h-full bg-secondary/20 p-4">
       <iframe
         ref={ref}
         src={fileUrl}
-        className="w-full h-full border-0 rounded-md"
+        className="w-full h-full border-2 border-border rounded-lg"
         title="PDF Viewer"
       />
     </div>

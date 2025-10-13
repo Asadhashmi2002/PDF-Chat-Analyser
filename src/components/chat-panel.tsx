@@ -1,11 +1,11 @@
 'use client';
 
-import { type FormEvent, useRef } from 'react';
+import { type FormEvent, useRef, useEffect } from 'react';
 import type { Message } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, ArrowUp, Bot, User, FileText, Bookmark } from 'lucide-react';
+import { Loader2, ArrowUp, Bot, User, FileText, Bookmark, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -27,6 +27,17 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [messages, isAnswering]);
+
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -53,39 +64,39 @@ export default function ChatPanel({
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <header className="flex items-center p-4 border-b shrink-0">
+      <header className="flex items-center p-4 border-b shrink-0 bg-secondary/50">
         <FileText className="w-5 h-5 mr-3 text-primary" />
         <h2 className="text-lg font-semibold truncate" title={pdfFileName}>
           {pdfFileName}
         </h2>
       </header>
       
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
+      <ScrollArea className="flex-1" ref={scrollAreaRef}>
+        <div className="p-6 space-y-8">
           {messages.map((message, index) => (
             <div
               key={index}
               className={cn(
-                'flex items-start gap-3',
+                'flex items-start gap-4',
                 message.role === 'user' ? 'justify-end' : 'justify-start'
               )}
             >
               {message.role === 'assistant' && (
-                <Avatar className="w-8 h-8 shrink-0">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    <Bot className="w-5 h-5" />
+                <Avatar className="w-9 h-9 shrink-0 border-2 border-primary/50">
+                  <AvatarFallback className="bg-primary/20 text-primary">
+                    <Sparkles className="w-5 h-5" />
                   </AvatarFallback>
                 </Avatar>
               )}
               <div
                 className={cn(
-                  'max-w-[85%] p-3 rounded-lg',
+                  'max-w-[85%] p-4 rounded-xl',
                   message.role === 'user'
                     ? 'bg-primary text-primary-foreground rounded-br-none'
-                    : 'bg-muted rounded-bl-none'
+                    : 'bg-secondary rounded-bl-none'
                 )}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                 {message.citations && message.citations.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {message.citations.map((citation, i) => (
@@ -93,7 +104,7 @@ export default function ChatPanel({
                         key={i}
                         variant="default"
                         size="sm"
-                        className="h-auto px-2 py-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                        className="h-auto px-2 py-1 text-xs bg-primary/20 text-primary-foreground hover:bg-primary/30"
                         onClick={() => onCitationClick(citation)}
                       >
                         <Bookmark className="w-3 h-3 mr-1.5" />
@@ -104,7 +115,7 @@ export default function ChatPanel({
                 )}
               </div>
               {message.role === 'user' && (
-                <Avatar className="w-8 h-8 shrink-0">
+                <Avatar className="w-9 h-9 shrink-0">
                   <AvatarFallback>
                     <User className="w-5 h-5" />
                   </AvatarFallback>
@@ -113,26 +124,26 @@ export default function ChatPanel({
             </div>
           ))}
           {isAnswering && (
-            <div className="flex items-start gap-3 justify-start">
-              <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  <Bot className="w-5 h-5" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="bg-muted p-3 rounded-lg rounded-bl-none">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            <div className="flex items-start gap-4 justify-start">
+              <Avatar className="w-9 h-9 shrink-0 border-2 border-primary/50">
+                  <AvatarFallback className="bg-primary/20 text-primary">
+                    <Sparkles className="w-5 h-5" />
+                  </AvatarFallback>
+                </Avatar>
+              <div className="bg-secondary p-4 rounded-xl rounded-bl-none">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
               </div>
             </div>
           )}
         </div>
       </ScrollArea>
       
-      <footer className="p-4 border-t shrink-0">
+      <footer className="p-4 border-t shrink-0 bg-secondary/50">
         <form ref={formRef} onSubmit={handleSubmit} className="relative">
           <Textarea
             ref={inputRef}
-            placeholder="Ask a question about the PDF..."
-            className="pr-12 min-h-[48px] max-h-[200px] resize-none"
+            placeholder="Ask a question..."
+            className="pr-12 min-h-[48px] max-h-[200px] resize-none bg-background"
             onKeyDown={handleKeyDown}
             onInput={handleInput}
             rows={1}

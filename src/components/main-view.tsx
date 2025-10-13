@@ -74,11 +74,11 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing }: M
   };
 
   return (
-    <main className="flex h-screen w-screen bg-neutral-100 dark:bg-neutral-900">
-      <div className="flex-1">
+    <main className="grid grid-cols-1 md:grid-cols-2 h-screen w-screen bg-background">
+      <div className="hidden md:block">
         <PdfViewer fileUrl={pdfUrl} ref={pdfViewerRef} />
       </div>
-      <div className="w-full md:w-[45%] md:max-w-[650px] lg:w-[35%] lg:max-w-[550px] border-l border-border bg-background shadow-lg">
+      <div className="border-l border-border bg-background">
         <ChatPanel
           messages={messages}
           onSubmit={handleQuestionSubmit}

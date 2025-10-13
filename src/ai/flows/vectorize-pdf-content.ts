@@ -1,15 +1,15 @@
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow to vectorize PDF content using LlamaParse.
+ * @fileOverview This file defines a Genkit flow to vectorize PDF content.
  *
- * The flow takes a PDF data URI as input, converts it to Markdown using LlamaParse,
- * and returns the Markdown content.
+ * The flow takes a PDF data URI as input, extracts the text content,
+ * and returns it.
  *
  * @file Exports:
- *   - `vectorizePdfContent`: An async function that takes a PDF data URI and returns the vectorized Markdown content.
+ *   - `vectorizePdfContent`: An async function that takes a PDF data URI and returns the text content.
  *   - `VectorizePdfContentInput`: The input type for `vectorizePdfContent`, a PDF data URI.
- *   - `VectorizePdfContentOutput`: The output type for `vectorizePdfContent`, the Markdown content of the PDF.
+ *   - `VectorizePdfContentOutput`: The output type for `vectorizePdfContent`, the text content of the PDF.
  */
 
 import {ai} from '@/ai/genkit';
@@ -25,7 +25,7 @@ const VectorizePdfContentInputSchema = z.object({
 export type VectorizePdfContentInput = z.infer<typeof VectorizePdfContentInputSchema>;
 
 const VectorizePdfContentOutputSchema = z.object({
-  markdownContent: z.string().describe('The Markdown content of the PDF document.'),
+  markdownContent: z.string().describe('The text content of the PDF document.'),
 });
 export type VectorizePdfContentOutput = z.infer<typeof VectorizePdfContentOutputSchema>;
 
@@ -37,11 +37,9 @@ const vectorizePdfContentPrompt = ai.definePrompt({
   name: 'vectorizePdfContentPrompt',
   input: {schema: VectorizePdfContentInputSchema},
   output: {schema: VectorizePdfContentOutputSchema},
-  prompt: `You are an expert in processing PDF documents and extracting their content into Markdown format using LlamaParse.
+  prompt: `Extract the text content from the following PDF document.
 
-  Convert the PDF document provided as a data URI into a well-structured Markdown format suitable for vectorization.
-
-  PDF Data URI: {{pdfDataUri}}`,
+  PDF Data URI: {{media url=pdfDataUri}}`,
 });
 
 const vectorizePdfContentFlow = ai.defineFlow(
@@ -51,9 +49,6 @@ const vectorizePdfContentFlow = ai.defineFlow(
     outputSchema: VectorizePdfContentOutputSchema,
   },
   async input => {
-    // TODO: Integrate LlamaParse to convert PDF to Markdown
-    // Currently, the flow returns a placeholder Markdown content. Replace this with actual LlamaParse conversion.
-    //throw new Error('LlamaParse integration not implemented yet');
     const {output} = await vectorizePdfContentPrompt(input);
     return output!;
   }

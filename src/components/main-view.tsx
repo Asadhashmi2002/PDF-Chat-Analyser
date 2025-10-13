@@ -10,11 +10,11 @@ import ChatPanel from '@/components/chat-panel';
 interface MainViewProps {
   pdfFile: File;
   pdfText: string;
-  pdfDataUri: string;
+  pdfUrl: string;
   stopProcessing: () => void;
 }
 
-export default function MainView({ pdfFile, pdfText, pdfDataUri, stopProcessing }: MainViewProps) {
+export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing }: MainViewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAnswering, setIsAnswering] = useState(false);
   const pdfViewerRef = useRef<HTMLIFrameElement>(null);
@@ -62,7 +62,7 @@ export default function MainView({ pdfFile, pdfText, pdfDataUri, stopProcessing 
 
   const handleCitationClick = (page: string) => {
     if (pdfViewerRef.current) {
-        const baseUrl = pdfDataUri.split('#')[0];
+        const baseUrl = pdfUrl.split('#')[0];
         const newUrl = `${baseUrl}#page=${page}`;
         // The URL needs to be re-assigned to trigger navigation in the iframe
         pdfViewerRef.current.src = newUrl;
@@ -76,7 +76,7 @@ export default function MainView({ pdfFile, pdfText, pdfDataUri, stopProcessing 
   return (
     <main className="flex h-screen w-screen bg-neutral-100 dark:bg-neutral-900">
       <div className="flex-1">
-        <PdfViewer fileUrl={pdfDataUri} ref={pdfViewerRef} />
+        <PdfViewer fileUrl={pdfUrl} ref={pdfViewerRef} />
       </div>
       <div className="w-full md:w-[45%] md:max-w-[650px] lg:w-[35%] lg:max-w-[550px] border-l border-border bg-background shadow-lg">
         <ChatPanel

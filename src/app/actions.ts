@@ -37,8 +37,12 @@ export async function askQuestion(input: { question: string; pdfContent: string 
 
   try {
     const { answer } = await answerQuestionsAboutPdf({ question: input.question, pdfText: input.pdfContent });
-    // The current flow doesn't support citations, so we return an empty array.
-    return { answer: answer, citations: [] };
+    
+    // The current flow doesn't support citations, so we'll adjust the response.
+    // We can enhance this later to extract citations.
+    const citations = answer.match(/Page \d+/g)?.map(p => p.split(' ')[1]) || [];
+
+    return { answer: answer, citations };
   } catch (e: any) {
     console.error(e);
     return { error: e.message || 'Failed to get an answer.' };

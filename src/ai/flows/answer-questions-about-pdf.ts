@@ -18,7 +18,7 @@ const AnswerQuestionsAboutPdfInputSchema = z.object({
 export type AnswerQuestionsAboutPdfInput = z.infer<typeof AnswerQuestionsAboutPdfInputSchema>;
 
 const AnswerQuestionsAboutPdfOutputSchema = z.object({
-  answer: z.string().describe('The answer to the question about the PDF document.'),
+  answer: z.string().describe('The answer to the question about the PDF document. If you cite information, please use the format "Page X" to refer to page numbers.'),
 });
 export type AnswerQuestionsAboutPdfOutput = z.infer<typeof AnswerQuestionsAboutPdfOutputSchema>;
 
@@ -33,6 +33,8 @@ const prompt = ai.definePrompt({
   prompt: `You are an AI assistant that answers questions about PDF documents.
 
   Use the following PDF text to answer the user's question. If the answer is not contained in the text below, respond with "I am sorry, I cannot answer this question based on the provided text".
+
+  When you provide an answer, cite the page number where the information can be found using the format "Page X".
 
   PDF Text: {{{pdfText}}}
 

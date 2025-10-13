@@ -78,7 +78,7 @@ export default function MainView({ pdfFile, pdfText, stopProcessing }: MainViewP
 
   return (
     <main className="flex h-screen w-screen bg-neutral-100 dark:bg-neutral-900">
-      <div className="flex-1 hidden md:block">
+      <div className="flex-1">
         <PdfViewer fileUrl={pdfUrl} ref={pdfViewerRef} />
       </div>
       <div className="w-full md:w-[45%] md:max-w-[650px] lg:w-[35%] lg:max-w-[550px] border-l border-border bg-background shadow-lg">

@@ -23,8 +23,6 @@ const PdfViewer = forwardRef<HTMLIFrameElement, PdfViewerProps>(({ fileUrl }, re
         src={fileUrl}
         className="w-full h-full border-0 rounded-md"
         title="PDF Viewer"
-        // Allow same-origin scripts for potential interactions if needed in future
-        sandbox="allow-same-origin allow-scripts"
       />
     </div>
   );

@@ -9,7 +9,7 @@
  */
 
 import {z} from 'zod';
-import * as pdfParse from 'pdf-parse';
+const pdfParse = require('pdf-parse');
 
 // Perplexity API for intelligent PDF analysis and vectorization (2025)
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
@@ -29,8 +29,155 @@ function createVectorChunks(text: string, chunkSize: number = 512, overlap: numb
   return chunks;
 }
 
-// Use Perplexity AI to intelligently structure and vectorize PDF content (2025 - Primary)
-async function vectorizeWithPerplexityAI(text: string): Promise<string> {
+// Advanced PDF text extraction using multiple methods (2025 Enhanced)
+async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
+  text: string;
+  metadata: {
+    pages: number;
+    title?: string;
+    author?: string;
+    subject?: string;
+    creator?: string;
+    producer?: string;
+    creationDate?: string;
+    modificationDate?: string;
+  };
+  structure: {
+    headings: string[];
+    paragraphs: string[];
+    lists: string[];
+    tables: string[];
+  };
+}> {
+  let extractedText = '';
+  let metadata: any = {};
+  let structure: any = {
+    headings: [],
+    paragraphs: [],
+    lists: [],
+    tables: []
+  };
+
+  try {
+    // Method 1: pdf-parse (Primary - most reliable)
+    const pdfData = await pdfParse(pdfBuffer, {
+      max: 0, // No page limit
+      version: 'v1.10.100' // Latest version
+    });
+    
+    extractedText = pdfData.text;
+    metadata = {
+      pages: pdfData.numpages,
+      title: pdfData.info?.Title,
+      author: pdfData.info?.Author,
+      subject: pdfData.info?.Subject,
+      creator: pdfData.info?.Creator,
+      producer: pdfData.info?.Producer,
+      creationDate: pdfData.info?.CreationDate,
+      modificationDate: pdfData.info?.ModDate
+    };
+
+    // Method 2: Advanced text structure analysis
+    if (extractedText) {
+      // Extract headings (lines that are short and likely titles)
+      const lines = extractedText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      structure.headings = lines.filter(line => 
+        line.length < 100 && 
+        (line.match(/^[A-Z][A-Z\s]+$/) || 
+         line.match(/^\d+\.?\s+[A-Z]/) ||
+         line.match(/^[A-Z][a-z]+.*:$/))
+      );
+
+      // Extract paragraphs (longer text blocks)
+      structure.paragraphs = lines.filter(line => 
+        line.length > 100 && 
+        line.includes('.') && 
+        !line.match(/^\d+\.?\s*$/)
+      );
+
+      // Extract lists (lines with bullets or numbers)
+      structure.lists = lines.filter(line => 
+        line.match(/^[\s]*[•\-\*\d+\.]\s/) ||
+        line.match(/^\d+\.\s/) ||
+        line.match(/^[a-z]\.\s/)
+      );
+
+      // Extract tables (lines with multiple columns/spaces)
+      structure.tables = lines.filter(line => 
+        line.includes('  ') && 
+        line.split(/\s{2,}/).length > 2 &&
+        line.length > 50
+      );
+    }
+
+  } catch (error) {
+    console.error('Advanced PDF extraction error:', error);
+    throw new Error(`Advanced PDF processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+
+  return {
+    text: extractedText,
+    metadata,
+    structure
+  };
+}
+
+// Enhanced content analysis and optimization
+function analyzeContentStructure(text: string, structure: any): {
+  documentType: string;
+  keyTopics: string[];
+  importantSections: string[];
+  readabilityScore: number;
+} {
+  // Document type detection
+  let documentType = 'General Document';
+  if (text.toLowerCase().includes('contract') || text.toLowerCase().includes('agreement')) {
+    documentType = 'Contract/Agreement';
+  } else if (text.toLowerCase().includes('resume') || text.toLowerCase().includes('cv')) {
+    documentType = 'Resume/CV';
+  } else if (text.toLowerCase().includes('invoice') || text.toLowerCase().includes('bill')) {
+    documentType = 'Invoice/Bill';
+  } else if (text.toLowerCase().includes('report') || text.toLowerCase().includes('analysis')) {
+    documentType = 'Report/Analysis';
+  } else if (text.toLowerCase().includes('manual') || text.toLowerCase().includes('guide')) {
+    documentType = 'Manual/Guide';
+  }
+
+  // Extract key topics from headings and important text
+  const keyTopics = [
+    ...structure.headings.slice(0, 10),
+    ...text.split('\n')
+      .filter(line => line.length > 20 && line.length < 100)
+      .slice(0, 5)
+  ].filter(topic => topic && topic.trim().length > 0);
+
+  // Important sections (headings + first paragraph)
+  const importantSections = [
+    ...structure.headings.slice(0, 5),
+    ...structure.paragraphs.slice(0, 3)
+  ].filter(section => section && section.trim().length > 0);
+
+  // Simple readability score (0-100)
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const avgWordsPerSentence = words.length / sentences.length;
+  const readabilityScore = Math.max(0, Math.min(100, 100 - (avgWordsPerSentence - 10) * 2));
+
+  return {
+    documentType,
+    keyTopics,
+    importantSections,
+    readabilityScore
+  };
+}
+
+// Advanced Perplexity AI integration with enhanced prompting (2025)
+async function vectorizeWithPerplexityAI(
+  text: string, 
+  metadata: any, 
+  structure: any, 
+  analysis: any
+): Promise<string> {
   try {
     if (!PERPLEXITY_API_KEY) {
       return text;
@@ -45,6 +192,45 @@ async function vectorizeWithPerplexityAI(text: string): Promise<string> {
       return text;
     }
     
+    // Enhanced system prompt for better document understanding
+    const systemPrompt = `You are an advanced document analysis and structuring expert with expertise in:
+
+1. **Document Intelligence**: Understanding document types, structures, and content patterns
+2. **Content Optimization**: Improving readability while preserving all factual information
+3. **RAG Enhancement**: Structuring content for optimal retrieval-augmented generation
+4. **Metadata Integration**: Incorporating document metadata and structural analysis
+
+Your task is to analyze and restructure document content for maximum clarity, searchability, and AI comprehension while preserving 100% of the original information.`;
+
+    // Enhanced user prompt with context
+    const userPrompt = `Analyze and restructure this document for optimal AI processing:
+
+**DOCUMENT METADATA:**
+- Type: ${analysis.documentType}
+- Pages: ${metadata.pages}
+- Title: ${metadata.title || 'Not specified'}
+- Author: ${metadata.author || 'Not specified'}
+- Readability Score: ${analysis.readabilityScore}/100
+
+**DOCUMENT STRUCTURE:**
+- Headings: ${structure.headings.slice(0, 5).join(', ')}
+- Key Topics: ${analysis.keyTopics.slice(0, 5).join(', ')}
+- Important Sections: ${analysis.importantSections.slice(0, 3).join(' | ')}
+
+**DOCUMENT CONTENT:**
+${cleanText.substring(0, 45000)}
+
+**INSTRUCTIONS:**
+1. Preserve ALL factual information and data
+2. Improve structure and organization for better searchability
+3. Maintain document hierarchy and relationships
+4. Optimize for AI question-answering and retrieval
+5. Format as clean, well-organized text without markdown symbols
+6. Focus on clarity, coherence, and logical flow
+
+**OUTPUT FORMAT:**
+Provide a restructured version that enhances readability while maintaining all original content.`;
+
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
@@ -56,18 +242,14 @@ async function vectorizeWithPerplexityAI(text: string): Promise<string> {
         messages: [
           {
             role: 'system',
-            content: 'You are a document structuring expert. Clean, organize, and optimize document content. Preserve all factual information while improving readability.'
+            content: systemPrompt
           },
           {
             role: 'user',
-            content: `Structure this document content for optimal retrieval. Preserve all facts and data:
-
-${cleanText.substring(0, 50000)}
-
-Format the output as clean, well-organized text without markdown symbols. Focus on clarity and searchability.`
+            content: userPrompt
           }
         ],
-        max_tokens: 1500,
+        max_tokens: 2000,
         temperature: 0.1,
       }),
     });
@@ -81,13 +263,14 @@ Format the output as clean, well-organized text without markdown symbols. Focus 
         .replace(/\s+/g, ' ')
         .trim();
       
-      console.log('✓ Perplexity AI vectorization success');
+      console.log('✓ Advanced Perplexity AI vectorization success');
       return cleanStructured;
     } else {
       console.warn('Perplexity AI vectorization error:', response.status);
       return cleanText;
     }
   } catch (error) {
+    console.error('Perplexity AI error:', error);
     return text.replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim();
   }
 }
@@ -116,6 +299,8 @@ export type VectorizePdfContentOutput = z.infer<typeof VectorizePdfContentOutput
 
 export async function vectorizePdfContent(input: VectorizePdfContentInput): Promise<VectorizePdfContentOutput> {
   try {
+    console.log('🚀 Starting advanced PDF processing...');
+    
     // Extract base64 data from data URI
     const base64Data = input.pdfDataUri.split(',')[1];
     if (!base64Data) {
@@ -135,55 +320,67 @@ export async function vectorizePdfContent(input: VectorizePdfContentInput): Prom
       throw new Error('Invalid PDF file format');
     }
 
-    // Step 1: Proper PDF text extraction using pdf-parse library
-    let extractedText = '';
-    
-    try {
-      // Use pdf-parse library for proper PDF text extraction
-      const pdfData = await pdfParse(pdfBuffer);
-      extractedText = pdfData.text;
-      
-      if (!extractedText || extractedText.trim().length < 10) {
-        throw new Error('No readable text found in PDF');
-      }
-      
-      // Clean the extracted text
-      extractedText = extractedText
-        .replace(/\s+/g, ' ')
-        .replace(/[^\x20-\x7E]/g, '')
-        .trim();
-        
-    } catch (parseError: any) {
-      console.error('PDF parsing error:', parseError);
-      throw new Error(`PDF text extraction failed: ${parseError.message}`);
-    }
+    console.log('📄 PDF validation passed, starting advanced extraction...');
+
+    // Step 1: Advanced PDF text extraction with metadata and structure analysis
+    const extractionResult = await extractTextAdvanced(pdfBuffer);
+    const { text: extractedText, metadata, structure } = extractionResult;
     
     if (!extractedText || extractedText.trim().length < 10) {
-      throw new Error('PDF text extraction failed. This PDF may be image-based, password-protected, or corrupted. Please try a different PDF file.');
+      throw new Error(`PDF text extraction failed. Document analysis indicates: ${extractedText.length} characters extracted, which is insufficient for processing. This PDF may be image-based (requiring OCR), password-protected, or contain corrupted text streams. Please try a different PDF file or use a text-based PDF document.`);
     }
-    
-    // Step 2: Create vector chunks for RAG (2025 Enhanced)
+
+    console.log(`✅ Extracted ${extractedText.length} characters from ${metadata.pages} pages`);
+    console.log(`📊 Document metadata:`, {
+      title: metadata.title,
+      author: metadata.author,
+      pages: metadata.pages
+    });
+
+    // Step 2: Advanced content analysis
+    const analysis = analyzeContentStructure(extractedText, structure);
+    console.log(`🔍 Document analysis:`, {
+      type: analysis.documentType,
+      topics: analysis.keyTopics.slice(0, 3),
+      readability: analysis.readabilityScore
+    });
+
+    // Step 3: Create enhanced vector chunks for RAG
     const vectorChunks = createVectorChunks(extractedText);
-    console.log(`Created ${vectorChunks.length} RAG chunks for vectorization`);
-    
-    // Step 3: Use Perplexity AI to structure content (Primary) or local fallback
+    console.log(`🧠 Created ${vectorChunks.length} RAG chunks for vectorization`);
+
+    // Step 4: Advanced AI vectorization with context
     let vectorizedContent = extractedText;
     
-    // Try Perplexity AI first (2025 Primary)
     if (PERPLEXITY_API_KEY) {
-      console.log('Attempting Perplexity AI vectorization...');
-      vectorizedContent = await vectorizeWithPerplexityAI(extractedText);
+      console.log('🤖 Attempting advanced Perplexity AI vectorization...');
+      try {
+        vectorizedContent = await vectorizeWithPerplexityAI(extractedText, metadata, structure, analysis);
+        console.log('✅ Advanced AI vectorization completed');
+      } catch (aiError) {
+        console.warn('⚠️ AI vectorization failed, using fallback:', aiError);
+        vectorizedContent = cleanTextLocally(extractedText);
+      }
     } else {
-      console.log('⚠️ No Perplexity API key - using local text cleaning');
-      // Local fallback - just clean the text
+      console.log('⚠️ No Perplexity API key - using enhanced local processing');
       vectorizedContent = cleanTextLocally(extractedText);
     }
-    
-    // Return vectorized content ready for RAG-powered Q&A
+
+    // Step 5: Final optimization and validation
+    const finalContent = vectorizedContent
+      .replace(/\s+/g, ' ')
+      .replace(/[^\x20-\x7E]/g, '')
+      .trim();
+
+    console.log(`🎯 Final vectorized content: ${finalContent.length} characters`);
+    console.log('✅ Advanced PDF processing completed successfully');
+
+    // Return enhanced vectorized content ready for RAG-powered Q&A
     return {
-      markdownContent: vectorizedContent
+      markdownContent: finalContent
     };
   } catch (error) {
+    console.error('❌ Advanced PDF processing failed:', error);
     throw error;
   }
 }

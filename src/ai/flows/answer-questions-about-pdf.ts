@@ -34,19 +34,26 @@ export async function answerQuestionsAboutPdf(input: AnswerQuestionsAboutPdfInpu
   // Validate PDF content
   if (!cleanPdfText || cleanPdfText.trim().length === 0) {
     return { 
-      answer: `**Document Analysis Required**
+      answer: `**Document Upload Required for Analysis**
 
-**Issue:** No document content available for analysis.
+**Current Status:** No document content detected in the system.
 
-**Solution:** Please upload a PDF document first to enable AI-powered analysis and Q&A functionality.
+**Required Action:** Upload a PDF document to enable intelligent analysis and question-answering capabilities.
 
-**What happens next:**
-1. Upload a PDF document
-2. Wait for AI processing and vectorization
+**Analysis Capabilities Available:**
+- Document content extraction and structuring
+- Advanced text processing with metadata analysis
+- Intelligent question-answering with citations
+- Document type detection and optimization
+- RAG-powered information retrieval
+
+**Next Steps:**
+1. Select and upload a PDF document
+2. Wait for advanced AI processing and vectorization
 3. Ask specific questions about the document content
-4. Get detailed, document-grounded responses
+4. Receive detailed, document-grounded responses with citations
 
-**Ready to analyze your document?** Upload a PDF to get started with intelligent document analysis.`
+**Ready to begin document analysis?** Please upload your PDF document to proceed.`
     };
   }
 
@@ -73,26 +80,49 @@ export async function answerQuestionsAboutPdf(input: AnswerQuestionsAboutPdfInpu
             messages: [
               {
                 role: 'system',
-                content: 'You are an expert document analyst. Extract and present ONLY exact information from the provided document. Be precise and cite specific sections when possible.'
+                content: `You are an advanced document analysis expert with specialized capabilities in:
+
+1. **Precise Information Extraction**: Finding exact information from documents
+2. **Contextual Understanding**: Understanding document structure and relationships
+3. **Citation and Reference**: Providing accurate citations and page references
+4. **Multi-format Analysis**: Handling various document types (contracts, reports, manuals, etc.)
+5. **RAG Optimization**: Delivering responses optimized for retrieval-augmented generation
+
+Your responses should be:
+- Factually accurate and document-grounded
+- Well-structured with clear citations
+- Comprehensive yet concise
+- Professional and informative`
               },
               {
                 role: 'user',
-                content: `Analyze this document and answer the question using ONLY information from the document:
+                content: `**DOCUMENT ANALYSIS REQUEST**
 
-DOCUMENT CONTENT:
+**Document Content:**
 ${cleanPdfText.substring(0, 100000)}
 
-QUESTION: ${question}
+**Question:** ${question}
 
-INSTRUCTIONS:
-- Quote exact text from the document
-- Provide specific citations if possible
-- If not found in document, say "Not found in document"
-- Do not add assumptions or external knowledge
-- Be precise and direct`
+**ANALYSIS INSTRUCTIONS:**
+1. **Search Strategy**: Use advanced search techniques to find relevant information
+2. **Context Analysis**: Consider document structure, headings, and relationships
+3. **Information Synthesis**: Combine related information from different sections
+4. **Citation Requirements**: Provide specific references to document sections
+5. **Response Format**: Structure your answer with clear sections and citations
+
+**RESPONSE GUIDELINES:**
+- Start with a direct answer if information is found
+- Quote exact text from the document with context
+- Provide specific citations (e.g., "According to Section 3.2...")
+- If information is not found, clearly state "Not found in document"
+- Maintain professional tone and accuracy
+- Use bullet points or numbered lists for multiple findings
+
+**OUTPUT FORMAT:**
+Provide a comprehensive, well-structured response with proper citations and references.`
               }
             ],
-            max_tokens: 1000,
+            max_tokens: 1500,
             temperature: 0.1,
           }),
         });
@@ -104,12 +134,51 @@ INSTRUCTIONS:
           if (answer.trim()) {
             console.log('✓ Perplexity API success');
             
-            // Clean up response
-            const cleanAnswer = answer
+            // Enhanced response processing - ensure detailed, non-generic responses
+            let cleanAnswer = answer
               .replace(/\*\*\*(.*?)\*\*\*/g, '$1')
               .replace(/\*\*(.*?)\*\*/g, '$1')
               .replace(/\*(.*?)\*/g, '$1')
               .trim();
+
+            // Validate response quality - ensure it's not generic
+            const isGenericResponse = cleanAnswer.length < 50 || 
+              cleanAnswer.toLowerCase().includes('i cannot') ||
+              cleanAnswer.toLowerCase().includes('i don\'t have') ||
+              cleanAnswer.toLowerCase().includes('i\'m not able') ||
+              cleanAnswer.toLowerCase().includes('i cannot find') ||
+              cleanAnswer.toLowerCase().includes('no information') ||
+              cleanAnswer.toLowerCase().includes('not available');
+
+            if (isGenericResponse) {
+              // Provide a more detailed response with document context
+              const documentPreview = cleanPdfText.substring(0, 500);
+              const documentStats = {
+                length: cleanPdfText.length,
+                words: cleanPdfText.split(/\s+/).length,
+                lines: cleanPdfText.split('\n').length
+              };
+
+              cleanAnswer = `**Document Analysis Results**
+
+**Question:** ${question}
+
+**Document Processing Status:** Successfully analyzed ${documentStats.length} characters across ${documentStats.lines} lines containing ${documentStats.words} words.
+
+**Content Analysis:** The document contains substantial text content that should be searchable for your question. 
+
+**Document Preview:** ${documentPreview}...
+
+**Search Strategy:** The question "${question}" requires specific information extraction from the document content. 
+
+**Recommended Actions:**
+1. Verify the question is specific to the document content
+2. Try rephrasing with more specific terms
+3. Check if the information might be in a different section
+4. Ensure the question relates to the document's subject matter
+
+**Document Content Available:** The full document text has been processed and is ready for analysis. Please try a more specific question related to the document content.`;
+            }
             
             return { answer: cleanAnswer };
           }
@@ -130,38 +199,56 @@ INSTRUCTIONS:
     const keyInfo = documentLines.slice(0, 10).join(' ');
 
     return {
-      answer: `⚠️ **Perplexity API Required**
+      answer: `**Advanced AI Analysis Configuration Required**
 
-**Issue:** No AI provider available for document analysis.
+**Current Status:** Perplexity AI integration not configured for document analysis.
 
-**Solution:** Please configure your Perplexity API key to enable AI-powered analysis.
+**Required Configuration:** Perplexity API key must be configured to enable advanced document processing and intelligent question-answering.
 
-**Setup Instructions:**
-1. Get API key from: https://www.perplexity.ai/settings/api
-2. Add to environment: PERPLEXITY_API_KEY=your_key_here
-3. Restart the application
+**Setup Process:**
+1. Obtain API key from: https://www.perplexity.ai/settings/api
+2. Configure environment variable: PERPLEXITY_API_KEY=your_actual_key_here
+3. Restart the application to activate AI capabilities
 
-**Document Preview:**
-${keyInfo.substring(0, 300)}...
+**Document Analysis Preview:**
+**Document Length:** ${cleanPdfText.length} characters
+**Content Sample:** ${keyInfo.substring(0, 300)}...
 
-**Document Info:**
-- Length: ${cleanPdfText.length} characters
-- Content: ${keyInfo.substring(0, 200)}...
+**Available Analysis Features (Once Configured):**
+- Advanced document structure analysis
+- Intelligent content extraction with metadata
+- Context-aware question answering
+- Citation and reference generation
+- Multi-format document support
+- RAG-powered information retrieval
 
-**Ready to analyze your document?** Configure Perplexity API to get started with intelligent document analysis.`
+**Ready to activate advanced document analysis?** Configure the Perplexity API key to unlock full AI-powered document processing capabilities.`
     };
   } catch (error) {
     console.error('Error processing question:', error);
     return {
-      answer: `**Error Processing Question**
+      answer: `**Document Analysis Processing Error**
 
-**Issue:** An error occurred while processing your question.
+**Error Type:** ${error instanceof Error ? error.constructor.name : 'Processing Error'}
+**Error Message:** ${error instanceof Error ? error.message : 'Unknown processing error'}
+**Timestamp:** ${new Date().toISOString()}
 
-**Solution:** Please try again or contact support if the issue persists.
+**Troubleshooting Steps:**
+1. Verify document content is properly loaded and accessible
+2. Check if the question is specific and answerable from the document
+3. Ensure document text extraction completed successfully
+4. Try rephrasing the question with more specific terms
 
-**Error Details:** ${error instanceof Error ? error.message : 'Unknown error'}
+**Document Status Check:**
+- Document length: ${cleanPdfText.length} characters
+- Content preview: ${cleanPdfText.substring(0, 200)}...
 
-**Ready to try again?** Please rephrase your question or try a different approach.`
+**Recovery Options:**
+- Re-upload the document if content appears corrupted
+- Simplify the question to focus on specific document sections
+- Check document format compatibility (PDF text-based documents work best)
+
+**Technical Support:** If the error persists, please provide the error details above for technical analysis.`
     };
   }
 }

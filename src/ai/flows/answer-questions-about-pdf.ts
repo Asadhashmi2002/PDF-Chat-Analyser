@@ -57,7 +57,7 @@ export async function answerQuestionsAboutPdf(input: AnswerQuestionsAboutPdfInpu
             messages: [
               {
                 role: 'system',
-                content: `You are a document analysis expert. Answer questions based ONLY on the provided document content. Be direct, factual, and cite specific information from the document. If information is not found in the document, say "Not found in the document."`
+                content: `You are a document analysis assistant. Answer questions based on the provided document content. Be direct and factual. If information is not in the document, say "Not found in document."`
               },
               {
                 role: 'user',
@@ -66,11 +66,11 @@ ${cleanPdfText.substring(0, 100000)}
 
 Question: ${question}
 
-Answer based on the document content above. If the information is not in the document, say "Not found in the document."`
+Answer based on the document content. If information is not in the document, say "Not found in document."`
               }
             ],
-            max_tokens: 1500,
-            temperature: 0.1,
+            max_tokens: 2000,
+            temperature: 0.3,
           }),
         });
 
@@ -99,18 +99,64 @@ Answer based on the document content above. If the information is not in the doc
       }
     }
     
-    // Fallback: No other AI providers - only Grok AI
-    
-    // Extract key information from the document for a detailed response
-    const documentLines = cleanPdfText.split('\n').filter(line => line.trim().length > 0);
-    const keyInfo = documentLines.slice(0, 10).join(' ');
+    // SECONDARY: Try OpenAI for enhanced analysis (more detailed)
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (openaiApiKey) {
+      try {
+        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: [
+              {
+                role: 'system',
+                content: `You are an expert document analysis assistant. Provide detailed, comprehensive answers based on the document content. Be thorough and analytical. If information is not in the document, say "Not found in document."`
+              },
+              {
+                role: 'user',
+                content: `Document Content:
+${cleanPdfText.substring(0, 100000)}
 
+Question: ${question}
+
+Provide a detailed analysis based on the document content. If information is not in the document, say "Not found in document."`
+              }
+            ],
+            max_tokens: 2500,
+            temperature: 0.2,
+          }),
+        });
+
+        if (openaiResponse.ok) {
+          const openaiData = await openaiResponse.json();
+          const answer = openaiData.choices?.[0]?.message?.content || '';
+          
+          if (answer.trim()) {
+            let cleanAnswer = answer
+              .replace(/\*\*\*(.*?)\*\*\*/g, '$1')
+              .replace(/\*\*(.*?)\*\*/g, '$1')
+              .replace(/\*(.*?)\*/g, '$1')
+              .trim();
+
+            return { answer: cleanAnswer };
+          }
+        }
+      } catch (error) {
+        // Both AIs failed
+      }
+    }
+    
+    // Fallback: No AI providers available
     return {
-      answer: `AI analysis not available. Please configure the GROK_API_KEY environment variable.`
+      answer: `API connection failed. Please check GROK_API_KEY and OPENAI_API_KEY configuration.`
     };
   } catch (error) {
     return {
-      answer: `Error processing question: ${error instanceof Error ? error.message : 'Unknown error'}`
+      answer: `Processing error: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 }

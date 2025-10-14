@@ -6,9 +6,8 @@ import { useToast } from '../hooks/use-toast';
 import { askQuestion } from '../app/actions';
 import PdfViewer from './pdf-viewer';
 import ChatPanel from './chat-panel';
-import RAGChat from './rag-chat';
 import { Button } from './ui/button';
-import { FileText, MessageSquare, Home, Brain } from 'lucide-react';
+import { FileText, MessageSquare, Home } from 'lucide-react';
 
 interface MainViewProps {
   pdfFile: File;
@@ -22,7 +21,6 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAnswering, setIsAnswering] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
-  const [activeTab, setActiveTab] = useState<'chat' | 'rag'>('chat');
   const pdfViewerRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
 
@@ -39,15 +37,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
 
 **Document:** ${pdfFile.name}
 
-**Status:** Document processed but text extraction was limited. This may be due to:
-- Image-based PDF (scanned document)
-- Password-protected PDF
-- Corrupted or complex PDF structure
 
-**What I can help with:**
-- General questions about the document
-- File information and metadata
-- Basic document analysis
 
 *Please ask questions about the document, and I'll do my best to help based on the available information.*`,
               citations: []
@@ -61,7 +51,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
 
         // Get document summary and key content (like NotebookLM)
         const analysisResult = await askQuestion({ 
-          question: 'Analyze this document and extract the main topics, key concepts, and important information. Present it with bold headings for main topics (**Topic Name**), bullet points for details, and focus on the actual document content. Include specific terms and concepts that can be used for smart suggestions.', 
+          question: 'Summarize this document. Include main topics and key information.', 
           pdfContent: pdfText 
         });
         
@@ -77,19 +67,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
           setMessages([
             {
               role: 'assistant',
-              content: `📄 **Document Processed**
-
-**Document:** ${pdfFile.name}
-
-**Status:** Document has been uploaded and processed successfully.
-
-**What I can help with:**
-- Answer questions about the document content
-- Provide summaries and analysis
-- Explain specific topics or sections
-- Help you understand the information
-
-*Please ask questions about the document, and I'll provide detailed answers based on the content.*`,
+              content: `Document analysis failed. Please try uploading again.`,
               citations: []
             }
           ]);
@@ -98,19 +76,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
         setMessages([
           {
             role: 'assistant',
-            content: `📄 **Document Ready for Analysis**
-
-**Document:** ${pdfFile.name}
-**Status:** Successfully processed and ready for questions
-
-**What I can help with:**
-- Answer specific questions about the content
-- Explain complex topics in detail
-- Summarize sections or pages
-- Analyze data and trends
-- Provide insights and recommendations
-
-*I've processed your document and I'm ready to help you explore its content. Ask me any questions!*`,
+            content: `Document processing error. Please try again.`,
             citations: []
           }
         ]);
@@ -136,10 +102,9 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
               const result = await askQuestion({ question, pdfContent: pdfText });
               if (result.error || !result.answer) {
         toast({ title: 'Error', description: result.error || "Failed to get an answer.", variant: 'destructive' });
-        // Add error message to chat instead of reverting
         setMessages([...newMessages, { 
           role: 'assistant', 
-          content: `Sorry, I encountered an error: ${result.error || "Failed to get an answer."}`, 
+          content: result.error || "Failed to get an answer.", 
           citations: [] 
         }]);
       } else {
@@ -150,21 +115,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
       // Add error message to chat instead of reverting
       setMessages([...newMessages, { 
         role: 'assistant', 
-        content: `**Analysis Error**
-
-**Issue:** An unexpected error occurred during document analysis.
-
-**Document Status:** Your document is loaded and ready for analysis.
-
-**Solution:** Please try asking your question again. The document content is available for analysis.
-
-**Available Actions:**
-- Ask a specific question about the document content
-- Request analysis of particular sections
-- Ask for detailed explanations of concepts
-- Request insights and recommendations
-
-**Document Ready:** Your PDF is processed and ready for intelligent analysis.`, 
+        content: `Error: ${e instanceof Error ? e.message : 'Unknown error'}`, 
         citations: [] 
       }]);
     } finally {
@@ -172,17 +123,6 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
     }
   };
 
-  // RAG-powered question handler
-  const handleRAGQuestion = async (question: string): Promise<string> => {
-    try {
-      // Import the RAG function dynamically
-      const { answerQuestionWithRAG } = await import('../ai/flows/vectorize-pdf-content');
-      return await answerQuestionWithRAG(question);
-    } catch (error) {
-      console.error('RAG question error:', error);
-      return `Sorry, I encountered an error with the RAG system: ${error instanceof Error ? error.message : 'Unknown error'}`;
-    }
-  };
 
   const handleCitationClick = async (page: string) => {
     if (pdfViewerRef.current) {
@@ -217,19 +157,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
               // Add error message to chat
               setMessages(prev => [...prev, { 
                 role: 'assistant', 
-                content: `**Page Analysis Error**
-
-**Issue:** Unable to analyze page ${page} due to: ${result.error}
-
-**Document Status:** Your document is still available for analysis.
-
-**Available Actions:**
-- Ask questions about other parts of the document
-- Request analysis of different sections
-- Ask for general document insights
-- Navigate to other pages for analysis
-
-**Ready to help:** Your document is processed and ready for questions.`, 
+                content: `Page ${page} analysis error: ${result.error}`, 
                 citations: []
               }]);
             } else if (!result.answer) {
@@ -284,7 +212,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
   };
 
   return (
-    <main className="flex flex-col xl:grid xl:grid-cols-2 h-screen w-full bg-background modern-scrollbar overflow-hidden">
+    <main className="flex flex-col xl:grid xl:grid-cols-2 h-screen w-full bg-background modern-scrollbar overflow-hidden max-h-screen">
       {/* Modern Mobile/Tablet Toggle Buttons */}
       <div className="mobile-tab-container block xl:hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 p-3 sm:p-4 shadow-lg">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -352,42 +280,29 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
       </div>
       
       {/* Chat Panel - Always visible, full width on mobile */}
-      <div className={`${!showPdfViewer ? 'flex' : 'hidden'} xl:flex flex-1 xl:border-l border-border bg-background h-full`}>
-        <div className="flex flex-col w-full h-full">
-          {/* Chat Type Tabs */}
-          <div className="flex border-b border-border bg-muted/30">
-            <Button
-              variant={activeTab === 'chat' ? 'default' : 'ghost'}
-              className="flex-1 rounded-none"
-              onClick={() => setActiveTab('chat')}
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Standard Chat
-            </Button>
-            <Button
-              variant={activeTab === 'rag' ? 'default' : 'ghost'}
-              className="flex-1 rounded-none"
-              onClick={() => setActiveTab('rag')}
-            >
-              <Brain className="w-4 h-4 mr-2" />
-              RAG Chat
-            </Button>
+      <div className={`${!showPdfViewer ? 'flex' : 'hidden'} xl:flex flex-1 xl:border-l border-border bg-background h-full max-h-screen`}>
+        <div className="flex flex-col w-full h-full min-h-0">
+          {/* Chat Header */}
+          <div className="flex border-b border-border bg-muted/30 flex-shrink-0">
+            <div className="flex-1 p-4 text-center">
+              <h3 className="text-lg font-semibold flex items-center justify-center gap-2">
+                <MessageSquare className="w-5 h-5" />
+                Chat
+              </h3>
+              <p className="text-sm text-muted-foreground">Ask questions about your document</p>
+            </div>
           </div>
           
           {/* Chat Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'chat' ? (
-              <ChatPanel
-                messages={messages}
-                onSubmit={handleQuestionSubmit}
-                onCitationClick={handleCitationClick}
-                isAnswering={isAnswering}
-                pdfFileName={pdfFile.name}
-                pdfContent={pdfText}
-              />
-            ) : (
-              <RAGChat onQuestionSubmit={handleRAGQuestion} />
-            )}
+          <div className="flex-1 overflow-hidden min-h-0">
+            <ChatPanel
+              messages={messages}
+              onSubmit={handleQuestionSubmit}
+              onCitationClick={handleCitationClick}
+              isAnswering={isAnswering}
+              pdfFileName={pdfFile.name}
+              pdfContent={pdfText}
+            />
           </div>
         </div>
       </div>

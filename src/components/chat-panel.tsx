@@ -261,7 +261,7 @@ export default function ChatPanel({
         )}
       </header>
       
-      <div className="flex-1 relative overflow-y-auto chat-scrollbar modern-scrollbar min-h-0 mobile-chat-messages" ref={scrollAreaRef}>
+      <div className="flex-1 relative overflow-y-auto chat-scrollbar modern-scrollbar min-h-0 mobile-chat-messages max-h-full" ref={scrollAreaRef}>
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-8">
           {messages.map((message, index) => (
             <div

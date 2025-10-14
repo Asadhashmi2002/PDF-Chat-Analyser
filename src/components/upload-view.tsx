@@ -189,9 +189,9 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
           });
         }, 300);
         
-        try {
-          // Call the actual upload function
-          await onUpload(file);
+            try {
+              // Call the actual upload function
+              await onUpload(file);
           
           // Complete the progress
           setInternalUploadProgress(100);
@@ -209,10 +209,10 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
             variant: 'destructive'
           });
         }
-      } else {
-        // External upload is being handled by parent
-        await onUpload(file);
-      }
+          } else {
+            // External upload is being handled by parent
+            await onUpload(file);
+          }
     }
   };
 
@@ -366,7 +366,7 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                   type="submit" 
                   size="lg" 
                   className="w-full text-sm sm:text-base font-semibold group bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg transition-transform duration-200 ease-in-out hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100" 
-                  disabled={!file || isProcessing || isUploading || !isDocumentReady}
+                      disabled={!file || isProcessing || isUploading}
                 >
                   {isUploading ? (
                     <>
@@ -377,11 +377,6 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                     <>
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
                       Processing...
-                    </>
-                  ) : !isDocumentReady && file ? (
-                    <>
-                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
-                      Preparing Document...
                     </>
                   ) : (
                     <>

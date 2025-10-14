@@ -5,10 +5,10 @@
 /* Mobile responsive improvements */
 @layer utilities {
   .mobile-chat-container {
-    height: 100vh;
-    height: 100dvh; /* Dynamic viewport height for mobile */
+    height: 100%;
     display: flex;
     flex-direction: column;
+    min-height: 0;
   }
   
   .mobile-chat-header {
@@ -34,8 +34,13 @@
   
   @media (max-width: 768px) {
     .mobile-chat-container {
-      height: 100vh;
-      height: 100dvh;
+      height: 100%;
+      min-height: 0;
+      max-height: 100vh;
+    }
+    
+    .mobile-chat-messages {
+      max-height: calc(100vh - 120px); /* Account for header and footer */
     }
   }
   

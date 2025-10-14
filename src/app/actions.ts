@@ -9,8 +9,10 @@ const ProcessPdfInputSchema = z.object({
 });
 
 export async function processPdf(input: { pdfDataUri: string }): Promise<{ text?: string, error?: string }> {
+  
   const validation = ProcessPdfInputSchema.safeParse(input);
   if (!validation.success) {
+    console.error('PDF validation failed:', validation.error);
     return { error: 'Invalid PDF data URI format.' };
   }
 

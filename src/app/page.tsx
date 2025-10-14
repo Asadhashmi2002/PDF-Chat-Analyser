@@ -44,9 +44,6 @@ export default function Home() {
     setUploadProgress(0);
     setShowHome(false);
     
-    // Ensure we show loading UI immediately
-    console.log('Starting upload process...');
-    
     // Simulate upload progress for large files
     const progressInterval = setInterval(() => {
       setUploadProgress(prev => {
@@ -85,26 +82,22 @@ export default function Home() {
     const fileReader = new FileReader();
     fileReader.readAsDataURL(file);
 
-    fileReader.onload = async () => {
-      try {
-        const dataUri = fileReader.result as string;
-        console.log('File loaded, starting server processing...');
-        
-        // Complete upload progress
-        setUploadProgress(100);
-        clearInterval(progressInterval);
-        
-        // Now start server processing
-        setIsUploading(false);
-        setIsServerProcessing(true);
-        setServerProcessingProgress(0);
-        
-        console.log('Server processing started...');
-        
-        // Calculate realistic processing time based on file size
-        const fileSizeMB = file.size / (1024 * 1024);
-        const estimatedProcessingTime = Math.max(3000, fileSizeMB * 1000); // At least 3 seconds, +1 second per MB
-        console.log(`File size: ${fileSizeMB.toFixed(2)}MB, estimated processing time: ${estimatedProcessingTime}ms`);
+        fileReader.onload = async () => {
+          try {
+            const dataUri = fileReader.result as string;
+            
+            // Complete upload progress
+            setUploadProgress(100);
+            clearInterval(progressInterval);
+            
+            // Now start server processing
+            setIsUploading(false);
+            setIsServerProcessing(true);
+            setServerProcessingProgress(0);
+            
+            // Calculate realistic processing time based on file size
+            const fileSizeMB = file.size / (1024 * 1024);
+            const estimatedProcessingTime = Math.max(3000, fileSizeMB * 1000); // At least 3 seconds, +1 second per MB
         
         // Simulate realistic server processing progress
         const serverProgressInterval = setInterval(() => {
@@ -117,17 +110,14 @@ export default function Home() {
             const increment = fileSizeMB > 5 ? Math.random() * 3 : Math.random() * 8;
             return Math.min(prev + increment, 90);
           });
-        }, Math.max(300, fileSizeMB * 100)); // Slower intervals for larger files
-        
-        console.log('Calling processPdf...');
-        
-        // Add minimum processing delay for realistic experience
-        const processingPromise = processPdf({ pdfDataUri: dataUri });
-        const delayPromise = new Promise(resolve => setTimeout(resolve, estimatedProcessingTime));
-        
-        // Wait for both processing and minimum time
-        const [result] = await Promise.all([processingPromise, delayPromise]);
-        console.log('processPdf result:', result);
+            }, Math.max(300, fileSizeMB * 100)); // Slower intervals for larger files
+            
+            // Add minimum processing delay for realistic experience
+            const processingPromise = processPdf({ pdfDataUri: dataUri });
+            const delayPromise = new Promise(resolve => setTimeout(resolve, estimatedProcessingTime));
+            
+            // Wait for both processing and minimum time
+            const [result] = await Promise.all([processingPromise, delayPromise]);
         
         // Complete server processing
         clearInterval(serverProgressInterval);
@@ -135,11 +125,10 @@ export default function Home() {
         setIsServerProcessing(false);
         setIsProcessing(true);
 
-        clearTimeout(timeoutId); // Clear timeout
-        
-        if (result.error || !result.text) {
-          console.log('PDF processing error:', result.error);
-          toast({ title: "Error Processing PDF", description: result.error || "Could not extract text from PDF.", variant: 'destructive' });
+            clearTimeout(timeoutId); // Clear timeout
+            
+            if (result.error || !result.text) {
+              toast({ title: "Error Processing PDF", description: result.error || "Could not extract text from PDF.", variant: 'destructive' });
           // Reset all states properly
           setPdfFile(null);
           setPdfText(null);
@@ -151,15 +140,16 @@ export default function Home() {
           setServerProcessingProgress(0);
           setShowHome(true);
           URL.revokeObjectURL(newPdfUrl);
-        } else {
-          setPdfText(result.text);
-          setPdfFile(file);
-          setPdfUrl(newPdfUrl);
-          setIsDocumentReady(true);
-          // isProcessing will be set to false inside MainView after the PDF is rendered
-        }
+            } else {
+              setPdfText(result.text);
+              setPdfFile(file);
+              setPdfUrl(newPdfUrl);
+              setIsDocumentReady(true);
+              // isProcessing will be set to false inside MainView after the PDF is rendered
+            }
       } catch (e) {
-        console.log('Unexpected error during PDF processing:', e);
+        console.error('Unexpected error during PDF processing:', e);
+        console.error('Error details:', e instanceof Error ? e.message : 'Unknown error');
         clearTimeout(timeoutId); // Clear timeout
         clearInterval(progressInterval);
         // Clear server processing interval if it exists
@@ -217,17 +207,8 @@ export default function Home() {
     return <HomePage onGetStarted={() => setShowHome(false)} />;
   }
 
-  if (!pdfFile || !pdfText || !pdfUrl) {
-    // Debug logging
-    console.log('UploadView state:', {
-      isProcessing,
-      isUploading,
-      isServerProcessing,
-      uploadProgress,
-      serverProcessingProgress
-    });
-    
-    return <UploadView 
+      if (!pdfFile || !pdfText || !pdfUrl) {
+        return <UploadView
       onUpload={handlePdfUpload} 
       isProcessing={isProcessing || isUploading || isServerProcessing} 
       onGoHome={goToHome}

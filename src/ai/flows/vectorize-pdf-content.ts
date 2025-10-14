@@ -11,17 +11,16 @@
 import {z} from 'zod';
 import { OpenAI } from 'openai';
 
-
-// Grok AI for intelligent PDF analysis and vectorization (2025)
+// Dual AI System for optimal results (2025)
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// RAG System - Simple in-memory storage with OpenAI embeddings
+// RAG System with OpenAI embeddings for enhanced context
 let openai: OpenAI | null = null;
 let documentChunks: Array<{text: string, embedding: number[], metadata: any}> = [];
 
-// Initialize RAG system
-async function initializeRAG() {
+// Initialize OpenAI for embeddings
+async function initializeOpenAI() {
   if (!openai && OPENAI_API_KEY) {
     openai = new OpenAI({
       apiKey: OPENAI_API_KEY,
@@ -43,7 +42,10 @@ async function generateEmbedding(text: string): Promise<number[]> {
   return response.data[0].embedding;
 }
 
-// Calculate cosine similarity
+
+
+
+// Calculate cosine similarity for RAG
 function cosineSimilarity(a: number[], b: number[]): number {
   const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
   const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
@@ -51,9 +53,9 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / (magnitudeA * magnitudeB);
 }
 
-// Store document chunks in memory
+// Store document chunks with embeddings for RAG
 async function storeDocumentChunks(chunks: string[], metadata: any) {
-  await initializeRAG();
+  await initializeOpenAI();
   
   if (!openai) {
     return;
@@ -84,7 +86,7 @@ async function storeDocumentChunks(chunks: string[], metadata: any) {
 
 // Retrieve relevant chunks using RAG
 async function retrieveRelevantChunks(query: string, topK: number = 5): Promise<string[]> {
-  await initializeRAG();
+  await initializeOpenAI();
   
   if (!openai || documentChunks.length === 0) {
     return [];
@@ -98,19 +100,15 @@ async function retrieveRelevantChunks(query: string, topK: number = 5): Promise<
       text: chunk.text,
       similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
       metadata: chunk.metadata
-    }));
+    })).sort((a, b) => b.similarity - a.similarity);
     
-    // Sort by similarity and take top K
-    const topChunks = similarities
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, topK)
-      .filter(chunk => chunk.similarity > 0.1); // Only return chunks with reasonable similarity
-    
-    return topChunks.map(chunk => chunk.text);
+    // Return top K most relevant chunks
+    return similarities.slice(0, topK).map(item => item.text);
   } catch (error) {
     return [];
   }
 }
+
 
 // Advanced text chunking for RAG (Retrieval-Augmented Generation) - 2025 Enhanced
 function createVectorChunks(text: string, chunkSize: number = 512, overlap: number = 128): string[] {
@@ -158,11 +156,10 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
 
   try {
     // Universal PDF parsing - handles all PDF types including image-based PDFs
-    console.log('📄 Starting universal PDF content extraction...');
-    
+   
     // Method 1: Try pdfjs-dist first (most reliable for text extraction)
     try {
-      console.log('🔄 Attempting pdfjs-dist extraction...');
+      
       // @ts-ignore - pdfjs-dist module types
       const pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
       const uint8Array = new Uint8Array(pdfBuffer);
@@ -389,7 +386,7 @@ export async function answerQuestionWithRAG(question: string): Promise<string> {
     console.log(`🤔 Processing question with RAG: "${question}"`);
     
     // Initialize RAG system
-    await initializeRAG();
+    await initializeOpenAI();
     
     if (!openai || documentChunks.length === 0) {
       return "RAG system not available. Please ensure OpenAI API key is configured and document is processed.";
@@ -445,15 +442,18 @@ export async function answerQuestionWithRAG(question: string): Promise<string> {
   }
 }
 
-// Advanced Grok AI integration with enhanced prompting (2025)
-async function vectorizeWithGrokAI(
+// Dual AI System for optimal document processing (2025)
+async function vectorizeWithDualAI(
   text: string, 
   metadata: any, 
   structure: any, 
   analysis: any
 ): Promise<string> {
   try {
-    if (!GROK_API_KEY) {
+    const grokApiKey = process.env.GROK_API_KEY;
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    
+    if (!grokApiKey && !openaiApiKey) {
       return text;
     }
     
@@ -636,7 +636,7 @@ export async function vectorizePdfContent(input: VectorizePdfContentInput): Prom
         const relevantChunks = await retrieveRelevantChunks(extractedText.substring(0, 200), 3);
         console.log(`🔍 Retrieved ${relevantChunks.length} relevant chunks for context`);
         
-        vectorizedContent = await vectorizeWithGrokAI(extractedText, metadata, structure, analysis);
+        vectorizedContent = await vectorizeWithDualAI(extractedText, metadata, structure, analysis);
         console.log('✅ Advanced AI vectorization with RAG completed');
       } catch (aiError) {
         console.warn('⚠️ AI vectorization failed, using fallback:', aiError);

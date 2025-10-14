@@ -12,6 +12,7 @@ import {z} from 'zod';
 
 // Perplexity API for intelligent PDF analysis and vectorization (2025)
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
+const LLAMA_CLOUD_API_KEY = process.env.LLAMA_CLOUD_API_KEY;
 
 // Advanced text chunking for RAG (Retrieval-Augmented Generation) - 2025 Enhanced
 function createVectorChunks(text: string, chunkSize: number = 512, overlap: number = 128): string[] {
@@ -28,7 +29,7 @@ function createVectorChunks(text: string, chunkSize: number = 512, overlap: numb
   return chunks;
 }
 
-// Advanced PDF text extraction using multiple methods (2025 Enhanced)
+// Advanced PDF text extraction using LlamaParse (2025 Enhanced)
 async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
   text: string;
   metadata: {
@@ -58,23 +59,113 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
   };
 
   try {
-    // Method 1: pdf-parse (Primary - most reliable)
-    const pdfParse = eval('require')('pdf-parse');
-    const pdfData = await pdfParse(pdfBuffer);
+    if (LLAMA_CLOUD_API_KEY) {
+      // Method 1: LlamaCloud API (Primary - most reliable for complex PDFs)
+      console.log('🤖 Using LlamaCloud API for advanced PDF processing...');
+      
+      try {
+        // Use LlamaCloud API directly via HTTP requests
+        const formData = new FormData();
+        const arrayBuffer = pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength);
+        formData.append('upload_file', new Blob([arrayBuffer as ArrayBuffer], { type: 'application/pdf' }), 'document.pdf');
+        
+        // Upload file to LlamaCloud
+        const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/files', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LLAMA_CLOUD_API_KEY}`,
+          },
+          body: formData
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+        }
+        
+        const uploadResult = await uploadResponse.json();
+        console.log('📁 File uploaded to LlamaCloud:', uploadResult.id);
+        
+        // Parse the uploaded file using the correct API structure
+        const parseResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/parse', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LLAMA_CLOUD_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            file_id: uploadResult.id,
+            result_type: 'text',
+            verbose: true,
+            language: 'en'
+          })
+        });
+        
+        if (!parseResponse.ok) {
+          throw new Error(`Parse failed: ${parseResponse.statusText}`);
+        }
+        
+        const parseResult = await parseResponse.json();
+        
+        if (parseResult && parseResult.text) {
+          extractedText = parseResult.text;
+          metadata = {
+            pages: parseResult.metadata?.pageCount || 1,
+            title: parseResult.metadata?.title,
+            author: parseResult.metadata?.author,
+            subject: parseResult.metadata?.subject,
+            creator: parseResult.metadata?.creator,
+            producer: parseResult.metadata?.producer,
+            creationDate: parseResult.metadata?.creationDate,
+            modificationDate: parseResult.metadata?.modificationDate
+          };
+          
+          console.log('✅ LlamaCloud extraction successful');
+        }
+      } catch (parseError) {
+        console.warn('⚠️ LlamaCloud parsing failed, falling back to pdf-parse:', parseError);
+        // Fall through to pdf-parse fallback
+      }
+    }
     
-    extractedText = pdfData.text;
-    metadata = {
-      pages: pdfData.numpages,
-      title: pdfData.info?.Title,
-      author: pdfData.info?.Author,
-      subject: pdfData.info?.Subject,
-      creator: pdfData.info?.Creator,
-      producer: pdfData.info?.Producer,
-      creationDate: pdfData.info?.CreationDate,
-      modificationDate: pdfData.info?.ModDate
-    };
+    // Fallback: Use pdf-parse if LlamaCloud failed or no API key
+    if (!extractedText) {
+      console.log('⚠️ Using fallback pdf-parse');
+      try {
+        // Use require for pdf-parse in server environment
+        const pdfParse = require('pdf-parse');
+        const pdfData = await pdfParse(pdfBuffer);
+        
+        extractedText = pdfData.text;
+        metadata = {
+          pages: pdfData.numpages,
+          title: pdfData.info?.Title,
+          author: pdfData.info?.Author,
+          subject: pdfData.info?.Subject,
+          creator: pdfData.info?.Creator,
+          producer: pdfData.info?.Producer,
+          creationDate: pdfData.info?.CreationDate,
+          modificationDate: pdfData.info?.ModDate
+        };
+        console.log('✅ pdf-parse fallback successful');
+      } catch (pdfParseError) {
+        console.error('pdf-parse fallback failed:', pdfParseError);
+        // Provide a basic fallback with minimal text extraction
+        extractedText = 'PDF content could not be extracted. Please try with a different PDF file.';
+        metadata = {
+          pages: 1,
+          title: 'Unknown',
+          author: 'Unknown',
+          subject: 'Unknown',
+          creator: 'Unknown',
+          producer: 'Unknown',
+          creationDate: new Date().toISOString(),
+          modificationDate: new Date().toISOString()
+        };
+        console.log('⚠️ Using minimal fallback text');
+      }
+    }
 
-    // Method 2: Advanced text structure analysis
+    // Advanced text structure analysis
     if (extractedText) {
       // Extract headings (lines that are short and likely titles)
       const lines = extractedText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
@@ -295,9 +386,9 @@ const VectorizePdfContentOutputSchema = z.object({
 export type VectorizePdfContentOutput = z.infer<typeof VectorizePdfContentOutputSchema>;
 
 export async function vectorizePdfContent(input: VectorizePdfContentInput): Promise<VectorizePdfContentOutput> {
-  try {
+        try {
     console.log('🚀 Starting advanced PDF processing...');
-    
+
     // Extract base64 data from data URI
     const base64Data = input.pdfDataUri.split(',')[1];
     if (!base64Data) {
@@ -367,7 +458,7 @@ export async function vectorizePdfContent(input: VectorizePdfContentInput): Prom
     const finalContent = vectorizedContent
       .replace(/\s+/g, ' ')
       .replace(/[^\x20-\x7E]/g, '')
-      .trim();
+          .trim();
 
     console.log(`🎯 Final vectorized content: ${finalContent.length} characters`);
     console.log('✅ Advanced PDF processing completed successfully');

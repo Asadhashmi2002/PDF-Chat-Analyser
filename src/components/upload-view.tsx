@@ -15,6 +15,7 @@ interface UploadViewProps {
   onGoHome?: () => void;
   uploadProgress?: number;
   isUploading?: boolean;
+  isDocumentReady?: boolean;
 }
 
 // File size limits and warnings
@@ -46,7 +47,7 @@ const processingSteps = [
   { text: 'Preparing the interactive session...', icon: Bot },
 ];
 
-export default function UploadView({ onUpload, isProcessing, onGoHome, uploadProgress: externalUploadProgress, isUploading: externalIsUploading }: UploadViewProps) {
+export default function UploadView({ onUpload, isProcessing, onGoHome, uploadProgress: externalUploadProgress, isUploading: externalIsUploading, isDocumentReady = false }: UploadViewProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -331,14 +332,32 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                         <Loader2 className="w-4 h-4 animate-spin" />
                         {uploadProgress < 100 ? "Uploading file..." : "Processing on server..."}
                       </span>
-                      <span className="font-medium">{Math.round(uploadProgress)}%</span>
+                      <span className="font-medium text-blue-400">{Math.round(uploadProgress)}%</span>
                     </div>
                     <Progress value={uploadProgress} className="w-full h-2" />
                     <p className="text-xs text-gray-500 text-center">
-                      {uploadProgress < 50 ? "Preparing file..." : 
-                       uploadProgress < 90 ? "Uploading to server..." : 
-                       uploadProgress < 100 ? "Finalizing upload..." :
+                      {uploadProgress < 30 ? "Preparing file for upload..." : 
+                       uploadProgress < 70 ? "Uploading to server..." : 
+                       uploadProgress < 90 ? "Finalizing upload..." :
+                       uploadProgress < 100 ? "Completing upload..." :
                        "Processing PDF with AI..."}
+                    </p>
+                  </div>
+                )}
+
+                {/* Document Ready Progress - Only show when document is uploaded but not yet ready */}
+                {!isUploading && !isProcessing && !isDocumentReady && file && (
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-center justify-between text-sm text-gray-400">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Preparing Document...
+                      </span>
+                      <span className="font-medium text-green-400">100%</span>
+                    </div>
+                    <Progress value={100} className="w-full h-2" />
+                    <p className="text-xs text-gray-500 text-center">
+                      Document uploaded successfully, preparing for analysis...
                     </p>
                   </div>
                 )}
@@ -347,20 +366,26 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                   type="submit" 
                   size="lg" 
                   className="w-full text-sm sm:text-base font-semibold group bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg transition-transform duration-200 ease-in-out hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100" 
-                  disabled={!file || isProcessing || isUploading}
+                  disabled={!file || isProcessing || isUploading || !isDocumentReady}
                 >
                   {isUploading ? (
                     <>
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
-                      {uploadProgress < 100 ? "Uploading..." : "Processing..."}
+                      {uploadProgress < 100 ? `Uploading... ${Math.round(uploadProgress)}%` : "Processing..."}
                     </>
                   ) : isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
                       Processing...
                     </>
+                  ) : !isDocumentReady && file ? (
+                    <>
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                      Preparing Document...
+                    </>
                   ) : (
                     <>
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-green-400" />
                       Start Chatting
                       <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
                     </>

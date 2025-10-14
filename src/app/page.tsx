@@ -17,6 +17,7 @@ export default function Home() {
   const [showHome, setShowHome] = useState(true);
   const [isServerProcessing, setIsServerProcessing] = useState(false);
   const [serverProcessingProgress, setServerProcessingProgress] = useState(0);
+  const [isDocumentReady, setIsDocumentReady] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -113,10 +114,10 @@ export default function Home() {
               return 90;
             }
             // Slower progress for larger files
-            const increment = fileSizeMB > 5 ? Math.random() * 5 : Math.random() * 10;
-            return prev + increment;
+            const increment = fileSizeMB > 5 ? Math.random() * 3 : Math.random() * 8;
+            return Math.min(prev + increment, 90);
           });
-        }, Math.max(200, fileSizeMB * 50)); // Slower intervals for larger files
+        }, Math.max(300, fileSizeMB * 100)); // Slower intervals for larger files
         
         console.log('Calling processPdf...');
         
@@ -154,6 +155,7 @@ export default function Home() {
           setPdfText(result.text);
           setPdfFile(file);
           setPdfUrl(newPdfUrl);
+          setIsDocumentReady(true);
           // isProcessing will be set to false inside MainView after the PDF is rendered
         }
       } catch (e) {
@@ -207,6 +209,7 @@ export default function Home() {
     setIsServerProcessing(false);
     setUploadProgress(0);
     setServerProcessingProgress(0);
+    setIsDocumentReady(false);
     setShowHome(true);
   };
 
@@ -230,8 +233,15 @@ export default function Home() {
       onGoHome={goToHome}
       uploadProgress={isServerProcessing ? serverProcessingProgress : uploadProgress}
       isUploading={isUploading || isServerProcessing}
+      isDocumentReady={isDocumentReady}
     />;
   }
 
-  return <MainView pdfFile={pdfFile} pdfText={pdfText} pdfUrl={pdfUrl} stopProcessing={() => setIsProcessing(false)} onGoHome={goToHome} />;
+  return <MainView 
+    pdfFile={pdfFile} 
+    pdfText={pdfText} 
+    pdfUrl={pdfUrl} 
+    stopProcessing={() => setIsProcessing(false)} 
+    onGoHome={goToHome}
+  />;
 }

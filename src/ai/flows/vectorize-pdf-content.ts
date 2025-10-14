@@ -56,13 +56,10 @@ async function storeDocumentChunks(chunks: string[], metadata: any) {
   await initializeRAG();
   
   if (!openai) {
-    console.warn('RAG system not available - skipping vector storage');
     return;
   }
   
   try {
-    console.log('🔄 Storing document chunks in RAG system...');
-    
     // Clear existing chunks
     documentChunks = [];
     
@@ -79,13 +76,9 @@ async function storeDocumentChunks(chunks: string[], metadata: any) {
           chunkId: `${metadata.title || 'document'}_chunk_${i}`
         }
       });
-      
-      console.log(`📝 Stored chunk ${i + 1}/${chunks.length} in RAG system`);
     }
-    
-    console.log('✅ Document chunks stored in RAG system');
   } catch (error) {
-    console.error('Error storing document chunks:', error);
+    // Error storing document chunks
   }
 }
 
@@ -94,13 +87,10 @@ async function retrieveRelevantChunks(query: string, topK: number = 5): Promise<
   await initializeRAG();
   
   if (!openai || documentChunks.length === 0) {
-    console.warn('RAG system not available or no documents stored');
     return [];
   }
   
   try {
-    console.log('🔍 Retrieving relevant chunks using RAG...');
-    
     const queryEmbedding = await generateEmbedding(query);
     
     // Calculate similarities and sort
@@ -116,11 +106,8 @@ async function retrieveRelevantChunks(query: string, topK: number = 5): Promise<
       .slice(0, topK)
       .filter(chunk => chunk.similarity > 0.1); // Only return chunks with reasonable similarity
     
-    console.log(`✅ Retrieved ${topChunks.length} relevant chunks`);
-    
     return topChunks.map(chunk => chunk.text);
   } catch (error) {
-    console.error('Error retrieving relevant chunks:', error);
     return [];
   }
 }

@@ -15,6 +15,8 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showHome, setShowHome] = useState(true);
+  const [isServerProcessing, setIsServerProcessing] = useState(false);
+  const [serverProcessingProgress, setServerProcessingProgress] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -87,11 +89,29 @@ export default function Home() {
         setUploadProgress(100);
         clearInterval(progressInterval);
         
-        // Now start processing
+        // Now start server processing
         setIsUploading(false);
-        setIsProcessing(true);
+        setIsServerProcessing(true);
+        setServerProcessingProgress(0);
+        
+        // Simulate server processing progress
+        const serverProgressInterval = setInterval(() => {
+          setServerProcessingProgress(prev => {
+            if (prev >= 90) {
+              clearInterval(serverProgressInterval);
+              return 90;
+            }
+            return prev + Math.random() * 15;
+          });
+        }, 500);
         
         const result = await processPdf({ pdfDataUri: dataUri });
+        
+        // Complete server processing
+        clearInterval(serverProgressInterval);
+        setServerProcessingProgress(100);
+        setIsServerProcessing(false);
+        setIsProcessing(true);
 
         clearTimeout(timeoutId); // Clear timeout
         
@@ -103,7 +123,9 @@ export default function Home() {
           setPdfUrl(null);
           setIsProcessing(false);
           setIsUploading(false);
+          setIsServerProcessing(false);
           setUploadProgress(0);
+          setServerProcessingProgress(0);
           setShowHome(true);
           URL.revokeObjectURL(newPdfUrl);
         } else {
@@ -115,6 +137,11 @@ export default function Home() {
       } catch (e) {
         clearTimeout(timeoutId); // Clear timeout
         clearInterval(progressInterval);
+        // Clear server processing interval if it exists
+        if (typeof window !== 'undefined') {
+          const intervals = (window as any).__serverProgressIntervals || [];
+          intervals.forEach((interval: any) => clearInterval(interval));
+        }
         toast({ title: "Error", description: "An unexpected error occurred while processing the PDF.", variant: 'destructive' });
         // Reset all states properly
         setPdfFile(null);
@@ -122,7 +149,9 @@ export default function Home() {
         setPdfUrl(null);
         setIsProcessing(false);
         setIsUploading(false);
+        setIsServerProcessing(false);
         setUploadProgress(0);
+        setServerProcessingProgress(0);
         setShowHome(true);
         URL.revokeObjectURL(newPdfUrl);
       }
@@ -138,7 +167,9 @@ export default function Home() {
         setPdfUrl(null);
         setIsProcessing(false);
         setIsUploading(false);
+        setIsServerProcessing(false);
         setUploadProgress(0);
+        setServerProcessingProgress(0);
         setShowHome(true);
         URL.revokeObjectURL(newPdfUrl);
     };
@@ -150,7 +181,9 @@ export default function Home() {
     setPdfUrl(null);
     setIsProcessing(false);
     setIsUploading(false);
+    setIsServerProcessing(false);
     setUploadProgress(0);
+    setServerProcessingProgress(0);
     setShowHome(true);
   };
 
@@ -161,10 +194,10 @@ export default function Home() {
   if (!pdfFile || !pdfText || !pdfUrl) {
     return <UploadView 
       onUpload={handlePdfUpload} 
-      isProcessing={isProcessing || isUploading} 
+      isProcessing={isProcessing || isUploading || isServerProcessing} 
       onGoHome={goToHome}
-      uploadProgress={uploadProgress}
-      isUploading={isUploading}
+      uploadProgress={isServerProcessing ? serverProcessingProgress : uploadProgress}
+      isUploading={isUploading || isServerProcessing}
     />;
   }
 

@@ -329,7 +329,7 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                     <div className="flex items-center justify-between text-sm text-gray-400">
                       <span className="flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Uploading file...
+                        {uploadProgress < 100 ? "Uploading file..." : "Processing on server..."}
                       </span>
                       <span className="font-medium">{Math.round(uploadProgress)}%</span>
                     </div>
@@ -337,7 +337,8 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                     <p className="text-xs text-gray-500 text-center">
                       {uploadProgress < 50 ? "Preparing file..." : 
                        uploadProgress < 90 ? "Uploading to server..." : 
-                       "Finalizing upload..."}
+                       uploadProgress < 100 ? "Finalizing upload..." :
+                       "Server processing document..."}
                     </p>
                   </div>
                 )}
@@ -351,7 +352,7 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                   {isUploading ? (
                     <>
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
-                      Uploading...
+                      {uploadProgress < 100 ? "Uploading..." : "Processing..."}
                     </>
                   ) : isProcessing ? (
                     <>

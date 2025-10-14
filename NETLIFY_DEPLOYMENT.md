@@ -13,7 +13,7 @@
 2. **Configure Build Settings:**
    ```
    Build command: npm run build
-   Publish directory: out
+   Publish directory: .next
    ```
 
 3. **Set Environment Variables:**

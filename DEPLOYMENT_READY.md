@@ -16,7 +16,7 @@
 3. Connect GitHub and select `Asadhashmi2002/PDF-Chat-Analyser`
 4. Configure build settings:
    - **Build command:** `npm run build`
-   - **Publish directory:** `out`
+   - **Publish directory:** `.next`
 5. Add environment variables (see below)
 6. Click "Deploy site"
 

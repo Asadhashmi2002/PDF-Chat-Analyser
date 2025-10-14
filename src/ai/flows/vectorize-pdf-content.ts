@@ -11,6 +11,7 @@
 import {z} from 'zod';
 import { OpenAI } from 'openai';
 
+
 // Grok AI for intelligent PDF analysis and vectorization (2025)
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -172,11 +173,13 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
     // Universal PDF parsing - handles all PDF types including image-based PDFs
     console.log('📄 Starting universal PDF content extraction...');
     
-    // Method 1: Try pdfjs-dist first (best for text-based PDFs)
+    // Method 1: Try pdfjs-dist first (most reliable for text extraction)
     try {
       console.log('🔄 Attempting pdfjs-dist extraction...');
-      const pdfjsLib = await import('pdfjs-dist');
-      const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+      // @ts-ignore - pdfjs-dist module types
+      const pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
+      const uint8Array = new Uint8Array(pdfBuffer);
+      const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
       let fullText = '';
       
       for (let i = 1; i <= pdf.numPages; i++) {
@@ -203,124 +206,98 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
         throw new Error('No text content extracted with pdfjs-dist - likely image-based PDF');
       }
     } catch (pdfjsError) {
-      console.warn('⚠️ pdfjs-dist failed, trying pdf-parse:', pdfjsError);
+      console.warn('⚠️ pdfjs-dist failed, trying OCR for image-based PDFs:', pdfjsError);
       
-      // Method 2: Try pdf-parse as fallback
+      // Method 2: OCR for image-based PDFs using pdf2pic + tesseract.js
       try {
-        console.log('🔄 Attempting pdf-parse extraction...');
-        const pdfParse = require('pdf-parse');
-        const pdfData = await pdfParse(pdfBuffer);
+        console.log('🔄 Attempting OCR extraction for image-based PDF...');
+        const pdf2pic = require('pdf2pic');
+        const { createWorker } = require('tesseract.js');
         
-        if (pdfData.text && pdfData.text.trim().length > 0) {
-          extractedText = pdfData.text;
-          metadata = {
-            pages: pdfData.numpages,
-            title: pdfData.info?.Title || 'Document',
-            author: pdfData.info?.Author || 'Unknown',
-            subject: pdfData.info?.Subject || 'Unknown',
-            creator: pdfData.info?.Creator || 'Unknown',
-            producer: pdfData.info?.Producer || 'Unknown',
-            creationDate: pdfData.info?.CreationDate || new Date().toISOString(),
-            modificationDate: pdfData.info?.ModDate || new Date().toISOString()
-          };
-          console.log('✅ pdf-parse successful - extracted', extractedText.length, 'characters');
-        } else {
-          throw new Error('No text content extracted from PDF - likely image-based');
+        // Convert PDF to images
+        const convert = pdf2pic.fromBuffer(pdfBuffer, {
+          density: 300,           // Higher DPI for better OCR
+          saveFilename: "page",
+          savePath: "./temp",
+          format: "png",
+          width: 2000,
+          height: 2000
+        });
+        
+        const results = await convert.bulk(-1); // Convert all pages
+        console.log(`📸 Converted ${results.length} pages to images`);
+        
+        // Initialize Tesseract OCR worker
+        const worker = await createWorker('eng', 1, {
+          logger: (m: any) => console.log('OCR:', m)
+        });
+        
+        let ocrText = '';
+        for (let i = 0; i < results.length; i++) {
+          console.log(`🔍 Processing page ${i + 1} with OCR...`);
+          const { data: { text } } = await worker.recognize(results[i].path);
+          ocrText += text + '\n';
         }
-      } catch (pdfParseError) {
-        console.warn('⚠️ pdf-parse failed, trying OCR for image-based PDFs:', pdfParseError);
         
-        // Method 3: OCR for image-based PDFs using pdf2pic + tesseract.js
+        await worker.terminate();
+        
+        if (ocrText.trim().length > 0) {
+          extractedText = ocrText.trim();
+          metadata = {
+            pages: results.length,
+            title: 'Document (OCR)',
+            author: 'Unknown',
+            subject: 'Unknown',
+            creator: 'Unknown',
+            producer: 'Unknown',
+            creationDate: new Date().toISOString(),
+            modificationDate: new Date().toISOString()
+          };
+          console.log('✅ OCR successful - extracted', extractedText.length, 'characters from images');
+        } else {
+          throw new Error('OCR failed to extract text from images');
+        }
+      } catch (ocrError) {
+        console.warn('⚠️ OCR failed, trying pdf-lib metadata extraction:', ocrError);
+        
+        // Method 3: Try pdf-lib for metadata at minimum
         try {
-          console.log('🔄 Attempting OCR extraction for image-based PDF...');
-          const pdf2pic = require('pdf2pic');
-          const { createWorker } = require('tesseract.js');
+          console.log('🔄 Attempting pdf-lib metadata extraction...');
+          const { PDFDocument } = await import('pdf-lib');
+          const pdfDoc = await PDFDocument.load(pdfBuffer);
           
-          // Convert PDF to images
-          const convert = pdf2pic.fromBuffer(pdfBuffer, {
-            density: 300,           // Higher DPI for better OCR
-            saveFilename: "page",
-            savePath: "./temp",
-            format: "png",
-            width: 2000,
-            height: 2000
-          });
+          const pageCount = pdfDoc.getPageCount();
+          const title = pdfDoc.getTitle() || 'Document';
+          const author = pdfDoc.getAuthor() || 'Unknown';
+          const subject = pdfDoc.getSubject() || 'Unknown';
+          const creator = pdfDoc.getCreator() || 'Unknown';
+          const producer = pdfDoc.getProducer() || 'Unknown';
           
-          const results = await convert.bulk(-1); // Convert all pages
-          console.log(`📸 Converted ${results.length} pages to images`);
-          
-          // Initialize Tesseract OCR worker
-          const worker = await createWorker('eng', 1, {
-            logger: (m: any) => console.log('OCR:', m)
-          });
-          
-          let ocrText = '';
-          for (let i = 0; i < results.length; i++) {
-            console.log(`🔍 Processing page ${i + 1} with OCR...`);
-            const { data: { text } } = await worker.recognize(results[i].path);
-            ocrText += text + '\n';
-          }
-          
-          await worker.terminate();
-          
-          if (ocrText.trim().length > 0) {
-            extractedText = ocrText.trim();
-            metadata = {
-              pages: results.length,
-              title: 'Document (OCR)',
-              author: 'Unknown',
-              subject: 'Unknown',
-              creator: 'Unknown',
-              producer: 'Unknown',
-              creationDate: new Date().toISOString(),
-              modificationDate: new Date().toISOString()
-            };
-            console.log('✅ OCR successful - extracted', extractedText.length, 'characters from images');
-          } else {
-            throw new Error('OCR failed to extract text from images');
-          }
-        } catch (ocrError) {
-          console.warn('⚠️ OCR failed, trying pdf-lib metadata extraction:', ocrError);
-          
-          // Method 4: Try pdf-lib for metadata at minimum
-          try {
-            console.log('🔄 Attempting pdf-lib metadata extraction...');
-            const { PDFDocument } = await import('pdf-lib');
-            const pdfDoc = await PDFDocument.load(pdfBuffer);
-            
-            const pageCount = pdfDoc.getPageCount();
-            const title = pdfDoc.getTitle() || 'Document';
-            const author = pdfDoc.getAuthor() || 'Unknown';
-            const subject = pdfDoc.getSubject() || 'Unknown';
-            const creator = pdfDoc.getCreator() || 'Unknown';
-            const producer = pdfDoc.getProducer() || 'Unknown';
-            
-            extractedText = `Document processed with pdf-lib. Title: ${title}, Author: ${author}, Pages: ${pageCount}. This appears to be an image-based PDF. For better text extraction, please use a text-based PDF or ensure the document has selectable text.`;
-            metadata = {
-              pages: pageCount,
-              title: title,
-              author: author,
-              subject: subject,
-              creator: creator,
-              producer: producer,
-              creationDate: new Date().toISOString(),
-              modificationDate: new Date().toISOString()
-            };
-            console.log('✅ pdf-lib successful - extracted metadata and basic info');
-          } catch (pdfLibError) {
-            console.error('❌ All PDF extraction methods failed:', pdfLibError);
-            extractedText = 'PDF content extraction failed. The document may be corrupted, password-protected, or in an unsupported format. Please try with a different PDF file.';
-            metadata = {
-              pages: 1,
-              title: 'Document',
-              author: 'Unknown',
-              subject: 'Unknown',
-              creator: 'Unknown',
-              producer: 'Unknown',
-              creationDate: new Date().toISOString(),
-              modificationDate: new Date().toISOString()
-            };
-          }
+          extractedText = `Document processed with pdf-lib. Title: ${title}, Author: ${author}, Pages: ${pageCount}. This appears to be an image-based PDF. For better text extraction, please use a text-based PDF or ensure the document has selectable text.`;
+          metadata = {
+            pages: pageCount,
+            title: title,
+            author: author,
+            subject: subject,
+            creator: creator,
+            producer: producer,
+            creationDate: new Date().toISOString(),
+            modificationDate: new Date().toISOString()
+          };
+          console.log('✅ pdf-lib successful - extracted metadata and basic info');
+        } catch (pdfLibError) {
+          console.error('❌ All PDF extraction methods failed:', pdfLibError);
+          extractedText = 'PDF content extraction failed. The document may be corrupted, password-protected, or in an unsupported format. Please try with a different PDF file.';
+          metadata = {
+            pages: 1,
+            title: 'Document',
+            author: 'Unknown',
+            subject: 'Unknown',
+            creator: 'Unknown',
+            producer: 'Unknown',
+            creationDate: new Date().toISOString(),
+            modificationDate: new Date().toISOString()
+          };
         }
       }
     }
@@ -450,7 +427,7 @@ export async function answerQuestionWithRAG(question: string): Promise<string> {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'llama-3.1-70b-versatile',
+          model: 'llama-3.1-8b-instant',
           messages: [
             {
               role: 'system',
@@ -547,8 +524,8 @@ Provide a restructured version that enhances readability while maintaining all o
         'Authorization': `Bearer ${GROK_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'llama-3.1-70b-versatile',
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
         messages: [
           {
             role: 'system',

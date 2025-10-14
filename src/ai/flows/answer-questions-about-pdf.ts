@@ -150,5 +150,18 @@ ${keyInfo.substring(0, 300)}...
 
 **Ready to analyze your document?** Configure Perplexity API to get started with intelligent document analysis.`
     };
+  } catch (error) {
+    console.error('Error processing question:', error);
+    return {
+      answer: `**Error Processing Question**
+
+**Issue:** An error occurred while processing your question.
+
+**Solution:** Please try again or contact support if the issue persists.
+
+**Error Details:** ${error instanceof Error ? error.message : 'Unknown error'}
+
+**Ready to try again?** Please rephrase your question or try a different approach.`
+    };
   }
 }

@@ -272,14 +272,14 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
   return (
     <main className="flex flex-col lg:grid lg:grid-cols-2 h-screen w-full bg-background modern-scrollbar overflow-hidden">
       {/* Modern Mobile/Tablet Toggle Buttons */}
-      <div className="lg:hidden modern-tab-container border-b border-slate-700/50 p-3 sm:p-4">
+      <div className="lg:hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 p-3 sm:p-4 shadow-lg">
         <div className="flex items-center gap-2 sm:gap-3">
           {onGoHome && (
             <Button
               variant="ghost"
               size="sm"
               onClick={onGoHome}
-              className="modern-tab-button rounded-xl bg-slate-700/50 hover:bg-slate-600/70 text-slate-200 hover:text-white transition-all duration-300 hover:scale-105 shadow-md border border-slate-600/30 backdrop-blur-sm"
+              className="rounded-xl bg-slate-700/50 hover:bg-slate-600/70 text-slate-200 hover:text-white transition-all duration-300 hover:scale-105 shadow-md border border-slate-600/30 backdrop-blur-sm relative overflow-hidden"
             >
               <Home className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               <span className="font-medium">Home</span>
@@ -290,9 +290,9 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
             <Button
               variant="ghost"
               size="sm"
-              className={`modern-tab-button flex-1 rounded-xl transition-all duration-300 font-medium ${
+              className={`flex-1 rounded-xl transition-all duration-300 font-medium relative overflow-hidden ${
                 !showPdfViewer 
-                  ? 'modern-tab-active text-white shadow-lg hover:scale-105' 
+                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-105' 
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
               }`}
               onClick={() => setShowPdfViewer(false)}
@@ -304,9 +304,9 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
             <Button
               variant="ghost"
               size="sm"
-              className={`modern-tab-button flex-1 rounded-xl transition-all duration-300 font-medium ${
+              className={`flex-1 rounded-xl transition-all duration-300 font-medium relative overflow-hidden ${
                 showPdfViewer 
-                  ? 'modern-tab-pdf-active text-white shadow-lg hover:scale-105' 
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-105' 
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
               }`}
               onClick={() => setShowPdfViewer(true)}

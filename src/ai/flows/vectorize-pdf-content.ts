@@ -59,134 +59,129 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
   };
 
   try {
-    if (LLAMA_CLOUD_API_KEY) {
-      // Method 1: LlamaCloud API (Primary - most reliable for complex PDFs)
-      console.log('🤖 Using LlamaCloud API for advanced PDF processing...');
-      
-      try {
-        // Use LlamaCloud API directly via HTTP requests
-        const formData = new FormData();
-        const arrayBuffer = pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength);
-        formData.append('upload_file', new Blob([arrayBuffer as ArrayBuffer], { type: 'application/pdf' }), 'document.pdf');
-        
-        // Upload file to LlamaCloud
-        const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/files', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LLAMA_CLOUD_API_KEY}`,
-          },
-          body: formData
-        });
-        
-        if (!uploadResponse.ok) {
-          throw new Error(`Upload failed: ${uploadResponse.statusText}`);
-        }
-        
-        const uploadResult = await uploadResponse.json();
-        console.log('📁 File uploaded to LlamaCloud:', uploadResult.id);
-        
-        // Parse the uploaded file using the correct API structure
-        const parseResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/parse', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LLAMA_CLOUD_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            file_id: uploadResult.id,
-            result_type: 'text',
-            verbose: true,
-            language: 'en'
-          })
-        });
-        
-        if (!parseResponse.ok) {
-          throw new Error(`Parse failed: ${parseResponse.statusText}`);
-        }
-        
-        const parseResult = await parseResponse.json();
-        
-        if (parseResult && parseResult.text) {
-          extractedText = parseResult.text;
-          metadata = {
-            pages: parseResult.metadata?.pageCount || 1,
-            title: parseResult.metadata?.title,
-            author: parseResult.metadata?.author,
-            subject: parseResult.metadata?.subject,
-            creator: parseResult.metadata?.creator,
-            producer: parseResult.metadata?.producer,
-            creationDate: parseResult.metadata?.creationDate,
-            modificationDate: parseResult.metadata?.modificationDate
-          };
-          
-          console.log('✅ LlamaCloud extraction successful');
-        }
-      } catch (parseError) {
-        console.warn('⚠️ LlamaCloud parsing failed, falling back to pdf-parse:', parseError);
-        // Fall through to pdf-parse fallback
-      }
-    }
+    // Direct PDF parsing approach - prioritize working solution
+    console.log('📄 Starting PDF content extraction...');
     
-    // Fallback: Use pdf-parse if LlamaCloud failed or no API key
-    if (!extractedText) {
-      console.log('⚠️ Using fallback pdf-parse');
+    // Method 1: Try pdf-parse first (most reliable)
+    try {
+      console.log('🔄 Attempting pdf-parse extraction...');
+      const pdfParse = require('pdf-parse');
+      const pdfData = await pdfParse(pdfBuffer);
+      
+      if (pdfData.text && pdfData.text.trim().length > 0) {
+        extractedText = pdfData.text;
+        metadata = {
+          pages: pdfData.numpages,
+          title: pdfData.info?.Title || 'Document',
+          author: pdfData.info?.Author || 'Unknown',
+          subject: pdfData.info?.Subject || 'Unknown',
+          creator: pdfData.info?.Creator || 'Unknown',
+          producer: pdfData.info?.Producer || 'Unknown',
+          creationDate: pdfData.info?.CreationDate || new Date().toISOString(),
+          modificationDate: pdfData.info?.ModDate || new Date().toISOString()
+        };
+        console.log('✅ pdf-parse successful - extracted', extractedText.length, 'characters');
+      } else {
+        throw new Error('No text content extracted from PDF');
+      }
+    } catch (pdfParseError) {
+      console.warn('⚠️ pdf-parse failed, trying pdfjs-dist:', pdfParseError);
+      
+      // Method 2: Try pdfjs-dist as fallback
       try {
-        // Use require for pdf-parse in server environment
-        const pdfParse = require('pdf-parse');
-        const pdfData = await pdfParse(pdfBuffer);
+        console.log('🔄 Attempting pdfjs-dist extraction...');
+        const pdfjsLib = await import('pdfjs-dist');
+        const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+        let fullText = '';
         
-        if (pdfData.text && pdfData.text.trim().length > 0) {
-          extractedText = pdfData.text;
-          metadata = {
-            pages: pdfData.numpages,
-            title: pdfData.info?.Title || 'Document',
-            author: pdfData.info?.Author || 'Unknown',
-            subject: pdfData.info?.Subject || 'Unknown',
-            creator: pdfData.info?.Creator || 'Unknown',
-            producer: pdfData.info?.Producer || 'Unknown',
-            creationDate: pdfData.info?.CreationDate || new Date().toISOString(),
-            modificationDate: pdfData.info?.ModDate || new Date().toISOString()
-          };
-          console.log('✅ pdf-parse fallback successful - extracted', extractedText.length, 'characters');
-        } else {
-          throw new Error('No text content extracted from PDF');
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          fullText += pageText + '\n';
         }
-      } catch (pdfParseError) {
-        console.error('pdf-parse fallback failed:', pdfParseError);
-        // Try alternative PDF parsing approach
-        try {
-          // Use pdfjs-dist as alternative
-          const pdfjsLib = await import('pdfjs-dist');
-          const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
-          let fullText = '';
-          
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map((item: any) => item.str).join(' ');
-            fullText += pageText + '\n';
+        
+        if (fullText.trim().length > 0) {
+          extractedText = fullText.trim();
+          metadata = {
+            pages: pdf.numPages,
+            title: 'Document',
+            author: 'Unknown',
+            subject: 'Unknown',
+            creator: 'Unknown',
+            producer: 'Unknown',
+            creationDate: new Date().toISOString(),
+            modificationDate: new Date().toISOString()
+          };
+          console.log('✅ pdfjs-dist successful - extracted', extractedText.length, 'characters');
+        } else {
+          throw new Error('No text content extracted with pdfjs-dist');
+        }
+      } catch (pdfjsError) {
+        console.warn('⚠️ pdfjs-dist failed, trying LlamaCloud API:', pdfjsError);
+        
+        // Method 3: Try LlamaCloud API as last resort
+        if (LLAMA_CLOUD_API_KEY) {
+          try {
+            console.log('🔄 Attempting LlamaCloud API extraction...');
+            const formData = new FormData();
+            const arrayBuffer = pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength);
+            formData.append('upload_file', new Blob([arrayBuffer as ArrayBuffer], { type: 'application/pdf' }), 'document.pdf');
+            
+            const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/files', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${LLAMA_CLOUD_API_KEY}`,
+              },
+              body: formData
+            });
+            
+            if (uploadResponse.ok) {
+              const uploadResult = await uploadResponse.json();
+              console.log('📁 File uploaded to LlamaCloud:', uploadResult.id);
+              
+              // Try to parse with LlamaCloud
+              const parseResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/parse', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${LLAMA_CLOUD_API_KEY}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  file_id: uploadResult.id,
+                  result_type: 'text',
+                  verbose: true,
+                  language: 'en'
+                })
+              });
+              
+              if (parseResponse.ok) {
+                const parseResult = await parseResponse.json();
+                if (parseResult && parseResult.text) {
+                  extractedText = parseResult.text;
+                  metadata = {
+                    pages: parseResult.metadata?.pageCount || 1,
+                    title: parseResult.metadata?.title || 'Document',
+                    author: parseResult.metadata?.author || 'Unknown',
+                    subject: parseResult.metadata?.subject || 'Unknown',
+                    creator: parseResult.metadata?.creator || 'Unknown',
+                    producer: parseResult.metadata?.producer || 'Unknown',
+                    creationDate: parseResult.metadata?.creationDate || new Date().toISOString(),
+                    modificationDate: parseResult.metadata?.modificationDate || new Date().toISOString()
+                  };
+                  console.log('✅ LlamaCloud API successful - extracted', extractedText.length, 'characters');
+                }
+              }
+            }
+          } catch (llamaError) {
+            console.warn('⚠️ LlamaCloud API failed:', llamaError);
           }
-          
-          if (fullText.trim().length > 0) {
-            extractedText = fullText.trim();
-            metadata = {
-              pages: pdf.numPages,
-              title: 'Document',
-              author: 'Unknown',
-              subject: 'Unknown',
-              creator: 'Unknown',
-              producer: 'Unknown',
-              creationDate: new Date().toISOString(),
-              modificationDate: new Date().toISOString()
-            };
-            console.log('✅ pdfjs-dist fallback successful - extracted', extractedText.length, 'characters');
-          } else {
-            throw new Error('No text content extracted with pdfjs-dist');
-          }
-        } catch (pdfjsError) {
-          console.error('pdfjs-dist fallback also failed:', pdfjsError);
-          // Final fallback - provide meaningful error message
-          extractedText = 'PDF content extraction failed. The document may be image-based or corrupted. Please try with a text-based PDF file.';
+        }
+        
+        // Final fallback if all methods fail
+        if (!extractedText) {
+          console.error('❌ All PDF extraction methods failed');
+          extractedText = 'PDF content extraction failed. The document may be image-based, corrupted, or in an unsupported format. Please try with a text-based PDF file.';
           metadata = {
             pages: 1,
             title: 'Document',
@@ -197,7 +192,6 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
             creationDate: new Date().toISOString(),
             modificationDate: new Date().toISOString()
           };
-          console.log('⚠️ Using final fallback text');
         }
       }
     }

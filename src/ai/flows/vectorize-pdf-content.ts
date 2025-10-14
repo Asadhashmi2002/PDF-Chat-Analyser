@@ -135,33 +135,70 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
         const pdfParse = require('pdf-parse');
         const pdfData = await pdfParse(pdfBuffer);
         
-        extractedText = pdfData.text;
-        metadata = {
-          pages: pdfData.numpages,
-          title: pdfData.info?.Title,
-          author: pdfData.info?.Author,
-          subject: pdfData.info?.Subject,
-          creator: pdfData.info?.Creator,
-          producer: pdfData.info?.Producer,
-          creationDate: pdfData.info?.CreationDate,
-          modificationDate: pdfData.info?.ModDate
-        };
-        console.log('✅ pdf-parse fallback successful');
+        if (pdfData.text && pdfData.text.trim().length > 0) {
+          extractedText = pdfData.text;
+          metadata = {
+            pages: pdfData.numpages,
+            title: pdfData.info?.Title || 'Document',
+            author: pdfData.info?.Author || 'Unknown',
+            subject: pdfData.info?.Subject || 'Unknown',
+            creator: pdfData.info?.Creator || 'Unknown',
+            producer: pdfData.info?.Producer || 'Unknown',
+            creationDate: pdfData.info?.CreationDate || new Date().toISOString(),
+            modificationDate: pdfData.info?.ModDate || new Date().toISOString()
+          };
+          console.log('✅ pdf-parse fallback successful - extracted', extractedText.length, 'characters');
+        } else {
+          throw new Error('No text content extracted from PDF');
+        }
       } catch (pdfParseError) {
         console.error('pdf-parse fallback failed:', pdfParseError);
-        // Provide a basic fallback with minimal text extraction
-        extractedText = 'PDF content could not be extracted. Please try with a different PDF file.';
-        metadata = {
-          pages: 1,
-          title: 'Unknown',
-          author: 'Unknown',
-          subject: 'Unknown',
-          creator: 'Unknown',
-          producer: 'Unknown',
-          creationDate: new Date().toISOString(),
-          modificationDate: new Date().toISOString()
-        };
-        console.log('⚠️ Using minimal fallback text');
+        // Try alternative PDF parsing approach
+        try {
+          // Use pdfjs-dist as alternative
+          const pdfjsLib = await import('pdfjs-dist');
+          const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+          let fullText = '';
+          
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item: any) => item.str).join(' ');
+            fullText += pageText + '\n';
+          }
+          
+          if (fullText.trim().length > 0) {
+            extractedText = fullText.trim();
+            metadata = {
+              pages: pdf.numPages,
+              title: 'Document',
+              author: 'Unknown',
+              subject: 'Unknown',
+              creator: 'Unknown',
+              producer: 'Unknown',
+              creationDate: new Date().toISOString(),
+              modificationDate: new Date().toISOString()
+            };
+            console.log('✅ pdfjs-dist fallback successful - extracted', extractedText.length, 'characters');
+          } else {
+            throw new Error('No text content extracted with pdfjs-dist');
+          }
+        } catch (pdfjsError) {
+          console.error('pdfjs-dist fallback also failed:', pdfjsError);
+          // Final fallback - provide meaningful error message
+          extractedText = 'PDF content extraction failed. The document may be image-based or corrupted. Please try with a text-based PDF file.';
+          metadata = {
+            pages: 1,
+            title: 'Document',
+            author: 'Unknown',
+            subject: 'Unknown',
+            creator: 'Unknown',
+            producer: 'Unknown',
+            creationDate: new Date().toISOString(),
+            modificationDate: new Date().toISOString()
+          };
+          console.log('⚠️ Using final fallback text');
+        }
       }
     }
 

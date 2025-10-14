@@ -17,12 +17,13 @@ const PdfViewer = forwardRef<HTMLIFrameElement, PdfViewerProps>(({ fileUrl }, re
   }
 
   return (
-    <div className="w-full h-full bg-secondary/20 p-4">
+    <div className="w-full h-full bg-secondary/20 p-2 sm:p-4 md:p-6 lg:p-8 modern-scrollbar">
       <iframe
         ref={ref}
         src={fileUrl}
-        className="w-full h-full border-2 border-border rounded-lg"
+        className="w-full h-full border-2 border-border rounded-lg sm:rounded-xl"
         title="PDF Viewer"
+        allow="fullscreen"
       />
     </div>
   );

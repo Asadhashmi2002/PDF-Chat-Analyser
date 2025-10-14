@@ -74,3 +74,336 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom Sparkle Animation */
+@keyframes sparkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.1) rotate(90deg);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.6;
+  }
+  75% {
+    transform: scale(1.1) rotate(270deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes sparkle-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 12px currentColor);
+  }
+}
+
+/* Enhanced Parallax Animations */
+.parallax-bg {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.parallax-gradient {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.mouse-parallax {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.floating-particle {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Modern Scrollbar Styling - 10x More Modern */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+  border-radius: 10px;
+  border: 1px solid hsl(var(--border));
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(var(--primary) / 0.9) 0%, hsl(var(--secondary) / 0.9) 100%);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px hsl(var(--primary) / 0.3);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, hsl(var(--primary) / 0.8) 0%, hsl(var(--secondary) / 0.8) 100%);
+  transform: scale(0.95);
+}
+
+::-webkit-scrollbar-corner {
+  background: hsl(var(--muted));
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary)) hsl(var(--muted));
+}
+
+/* Enhanced scrollbar for chat area */
+.chat-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.6) hsl(var(--muted) / 0.3);
+}
+
+.chat-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 8px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(var(--primary) / 0.6) 0%, hsl(var(--secondary) / 0.6) 100%);
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border) / 0.5);
+  transition: all 0.2s ease;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(var(--primary) / 0.8) 0%, hsl(var(--secondary) / 0.8) 100%);
+  transform: scale(1.05);
+  box-shadow: 0 0 8px hsl(var(--primary) / 0.4);
+}
+
+/* Ultra-modern scrollbar for main content */
+.modern-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.4) transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.4);
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.7);
+  transform: scaleY(1.2);
+  box-shadow: 0 0 12px hsl(var(--primary) / 0.5);
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:active {
+  background: hsl(var(--primary) / 0.9);
+  transform: scaleY(1.1);
+}
+
+/* Performance optimizations */
+.hero-content,
+.feature-card,
+.benefit-item,
+.cta-content {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Enhanced hover effects */
+.feature-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.benefit-item:hover {
+  transform: translateX(8px) scale(1.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Hero Section Entrance Animations */
+.hero-content {
+  animation: heroFadeIn 1s ease-out 0.2s both;
+}
+
+.hero-logo {
+  animation: logoSpin 1.2s ease-out 0.4s both;
+}
+
+.hero-title {
+  animation: titleSlideIn 0.8s ease-out 0.6s both;
+}
+
+.hero-description {
+  animation: descriptionFadeIn 0.6s ease-out 0.8s both;
+}
+
+.hero-cta {
+  animation: ctaBounce 0.6s ease-out 1s both;
+}
+
+.stat-item {
+  animation: statSlideUp 0.5s ease-out both;
+}
+
+.stat-item:nth-child(1) { animation-delay: 1.2s; }
+.stat-item:nth-child(2) { animation-delay: 1.3s; }
+.stat-item:nth-child(3) { animation-delay: 1.4s; }
+.stat-item:nth-child(4) { animation-delay: 1.5s; }
+
+/* Floating Particles Animation */
+.floating-particle {
+  animation: floatUpDown 3s ease-in-out infinite;
+}
+
+.floating-particle:nth-child(odd) {
+  animation-delay: 0.5s;
+}
+
+.floating-particle:nth-child(even) {
+  animation-delay: 1.5s;
+}
+
+/* Keyframe Animations */
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes logoSpin {
+  from {
+    opacity: 0;
+    transform: scale(0.8) rotate(0deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+@keyframes titleSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes descriptionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ctaBounce {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes statSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes floatUpDown {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-20px);
+    opacity: 0.8;
+  }
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  /* Improve touch targets */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Better text readability on mobile */
+  body {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  
+  /* Prevent horizontal scroll */
+  html, body {
+    overflow-x: hidden;
+  }
+  
+  /* Improve form inputs on mobile */
+  input, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Tablet-specific improvements */
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Optimize for tablet landscape */
+  .grid-cols-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}

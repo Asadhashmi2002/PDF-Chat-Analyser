@@ -6,8 +6,15 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'PDF Chat Navigator',
-  description: 'Upload and interact with your PDF documents.',
+  title: 'PDF Chat Analyser',
+  description: 'Upload and interact with your PDF documents using AI-powered analysis.',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

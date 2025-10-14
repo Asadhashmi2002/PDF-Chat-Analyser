@@ -5,8 +5,8 @@ console.log('🔍 Checking Environment Variables...\n');
 
 // Check required environment variables
 const requiredVars = [
-  'PERPLEXITY_API_KEY',
-  'LLAMA_CLOUD_API_KEY',
+  'GROK_API_KEY',
+  'OPENAI_API_KEY',
   'NODE_ENV'
 ];
 

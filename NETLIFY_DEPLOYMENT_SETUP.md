@@ -11,22 +11,24 @@ Add these environment variables in your Netlify dashboard:
 2. **Add the following variables:**
 
 ```
-PERPLEXITY_API_KEY=your_perplexity_api_key_here
-LLAMA_CLOUD_API_KEY=your_llama_cloud_api_key_here
+GROK_API_KEY=your_grok_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
 NODE_ENV=production
 ```
 
 ### API Keys Setup
 
-#### 1. Perplexity API Key
-- **Get your key from:** https://www.perplexity.ai/settings/api
-- **Variable name:** `PERPLEXITY_API_KEY`
+#### 1. Grok AI API Key
+- **Get your key from:** https://console.groq.com/keys
+- **Variable name:** `GROK_API_KEY`
 - **Purpose:** AI-powered document analysis and chat functionality
+- **Models available:** llama-3.1-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
 
-#### 2. LlamaCloud API Key  
-- **Get your key from:** https://cloud.llamaindex.ai/
-- **Variable name:** `LLAMA_CLOUD_API_KEY`
-- **Purpose:** Advanced PDF parsing and text extraction
+#### 2. OpenAI API Key
+- **Get your key from:** https://platform.openai.com/api-keys
+- **Variable name:** `OPENAI_API_KEY`
+- **Purpose:** RAG (Retrieval-Augmented Generation) embeddings and vector storage
+- **Models used:** text-embedding-3-small
 
 ### Deployment Steps
 

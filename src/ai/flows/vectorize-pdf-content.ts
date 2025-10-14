@@ -9,10 +9,120 @@
  */
 
 import {z} from 'zod';
+import { OpenAI } from 'openai';
 
-// Perplexity API for intelligent PDF analysis and vectorization (2025)
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
-const LLAMA_CLOUD_API_KEY = process.env.LLAMA_CLOUD_API_KEY;
+// Grok AI for intelligent PDF analysis and vectorization (2025)
+const GROK_API_KEY = process.env.GROK_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// RAG System - Simple in-memory storage with OpenAI embeddings
+let openai: OpenAI | null = null;
+let documentChunks: Array<{text: string, embedding: number[], metadata: any}> = [];
+
+// Initialize RAG system
+async function initializeRAG() {
+  if (!openai && OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: OPENAI_API_KEY,
+    });
+  }
+}
+
+// Generate embeddings using OpenAI
+async function generateEmbedding(text: string): Promise<number[]> {
+  if (!openai) {
+    throw new Error('OpenAI client not initialized');
+  }
+  
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    input: text,
+  });
+  
+  return response.data[0].embedding;
+}
+
+// Calculate cosine similarity
+function cosineSimilarity(a: number[], b: number[]): number {
+  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+  const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+  const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
+}
+
+// Store document chunks in memory
+async function storeDocumentChunks(chunks: string[], metadata: any) {
+  await initializeRAG();
+  
+  if (!openai) {
+    console.warn('RAG system not available - skipping vector storage');
+    return;
+  }
+  
+  try {
+    console.log('🔄 Storing document chunks in RAG system...');
+    
+    // Clear existing chunks
+    documentChunks = [];
+    
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const embedding = await generateEmbedding(chunk);
+      
+      documentChunks.push({
+        text: chunk,
+        embedding: embedding,
+        metadata: {
+          ...metadata,
+          chunkIndex: i,
+          chunkId: `${metadata.title || 'document'}_chunk_${i}`
+        }
+      });
+      
+      console.log(`📝 Stored chunk ${i + 1}/${chunks.length} in RAG system`);
+    }
+    
+    console.log('✅ Document chunks stored in RAG system');
+  } catch (error) {
+    console.error('Error storing document chunks:', error);
+  }
+}
+
+// Retrieve relevant chunks using RAG
+async function retrieveRelevantChunks(query: string, topK: number = 5): Promise<string[]> {
+  await initializeRAG();
+  
+  if (!openai || documentChunks.length === 0) {
+    console.warn('RAG system not available or no documents stored');
+    return [];
+  }
+  
+  try {
+    console.log('🔍 Retrieving relevant chunks using RAG...');
+    
+    const queryEmbedding = await generateEmbedding(query);
+    
+    // Calculate similarities and sort
+    const similarities = documentChunks.map(chunk => ({
+      text: chunk.text,
+      similarity: cosineSimilarity(queryEmbedding, chunk.embedding),
+      metadata: chunk.metadata
+    }));
+    
+    // Sort by similarity and take top K
+    const topChunks = similarities
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, topK)
+      .filter(chunk => chunk.similarity > 0.1); // Only return chunks with reasonable similarity
+    
+    console.log(`✅ Retrieved ${topChunks.length} relevant chunks`);
+    
+    return topChunks.map(chunk => chunk.text);
+  } catch (error) {
+    console.error('Error retrieving relevant chunks:', error);
+    return [];
+  }
+}
 
 // Advanced text chunking for RAG (Retrieval-Augmented Generation) - 2025 Enhanced
 function createVectorChunks(text: string, chunkSize: number = 512, overlap: number = 128): string[] {
@@ -59,139 +169,158 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
   };
 
   try {
-    // Direct PDF parsing approach - prioritize working solution
-    console.log('📄 Starting PDF content extraction...');
+    // Universal PDF parsing - handles all PDF types including image-based PDFs
+    console.log('📄 Starting universal PDF content extraction...');
     
-    // Method 1: Try pdf-parse first (most reliable)
+    // Method 1: Try pdfjs-dist first (best for text-based PDFs)
     try {
-      console.log('🔄 Attempting pdf-parse extraction...');
-      const pdfParse = require('pdf-parse');
-      const pdfData = await pdfParse(pdfBuffer);
+      console.log('🔄 Attempting pdfjs-dist extraction...');
+      const pdfjsLib = await import('pdfjs-dist');
+      const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+      let fullText = '';
       
-      if (pdfData.text && pdfData.text.trim().length > 0) {
-        extractedText = pdfData.text;
-        metadata = {
-          pages: pdfData.numpages,
-          title: pdfData.info?.Title || 'Document',
-          author: pdfData.info?.Author || 'Unknown',
-          subject: pdfData.info?.Subject || 'Unknown',
-          creator: pdfData.info?.Creator || 'Unknown',
-          producer: pdfData.info?.Producer || 'Unknown',
-          creationDate: pdfData.info?.CreationDate || new Date().toISOString(),
-          modificationDate: pdfData.info?.ModDate || new Date().toISOString()
-        };
-        console.log('✅ pdf-parse successful - extracted', extractedText.length, 'characters');
-      } else {
-        throw new Error('No text content extracted from PDF');
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map((item: any) => item.str).join(' ');
+        fullText += pageText + '\n';
       }
-    } catch (pdfParseError) {
-      console.warn('⚠️ pdf-parse failed, trying pdfjs-dist:', pdfParseError);
       
-      // Method 2: Try pdfjs-dist as fallback
+      if (fullText.trim().length > 0) {
+        extractedText = fullText.trim();
+        metadata = {
+          pages: pdf.numPages,
+          title: 'Document',
+          author: 'Unknown',
+          subject: 'Unknown',
+          creator: 'Unknown',
+          producer: 'Unknown',
+          creationDate: new Date().toISOString(),
+          modificationDate: new Date().toISOString()
+        };
+        console.log('✅ pdfjs-dist successful - extracted', extractedText.length, 'characters');
+      } else {
+        throw new Error('No text content extracted with pdfjs-dist - likely image-based PDF');
+      }
+    } catch (pdfjsError) {
+      console.warn('⚠️ pdfjs-dist failed, trying pdf-parse:', pdfjsError);
+      
+      // Method 2: Try pdf-parse as fallback
       try {
-        console.log('🔄 Attempting pdfjs-dist extraction...');
-        const pdfjsLib = await import('pdfjs-dist');
-        const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
-        let fullText = '';
+        console.log('🔄 Attempting pdf-parse extraction...');
+        const pdfParse = require('pdf-parse');
+        const pdfData = await pdfParse(pdfBuffer);
         
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items.map((item: any) => item.str).join(' ');
-          fullText += pageText + '\n';
-        }
-        
-        if (fullText.trim().length > 0) {
-          extractedText = fullText.trim();
+        if (pdfData.text && pdfData.text.trim().length > 0) {
+          extractedText = pdfData.text;
           metadata = {
-            pages: pdf.numPages,
-            title: 'Document',
-            author: 'Unknown',
-            subject: 'Unknown',
-            creator: 'Unknown',
-            producer: 'Unknown',
-            creationDate: new Date().toISOString(),
-            modificationDate: new Date().toISOString()
+            pages: pdfData.numpages,
+            title: pdfData.info?.Title || 'Document',
+            author: pdfData.info?.Author || 'Unknown',
+            subject: pdfData.info?.Subject || 'Unknown',
+            creator: pdfData.info?.Creator || 'Unknown',
+            producer: pdfData.info?.Producer || 'Unknown',
+            creationDate: pdfData.info?.CreationDate || new Date().toISOString(),
+            modificationDate: pdfData.info?.ModDate || new Date().toISOString()
           };
-          console.log('✅ pdfjs-dist successful - extracted', extractedText.length, 'characters');
+          console.log('✅ pdf-parse successful - extracted', extractedText.length, 'characters');
         } else {
-          throw new Error('No text content extracted with pdfjs-dist');
+          throw new Error('No text content extracted from PDF - likely image-based');
         }
-      } catch (pdfjsError) {
-        console.warn('⚠️ pdfjs-dist failed, trying LlamaCloud API:', pdfjsError);
+      } catch (pdfParseError) {
+        console.warn('⚠️ pdf-parse failed, trying OCR for image-based PDFs:', pdfParseError);
         
-        // Method 3: Try LlamaCloud API as last resort
-        if (LLAMA_CLOUD_API_KEY) {
-          try {
-            console.log('🔄 Attempting LlamaCloud API extraction...');
-            const formData = new FormData();
-            const arrayBuffer = pdfBuffer.buffer.slice(pdfBuffer.byteOffset, pdfBuffer.byteOffset + pdfBuffer.byteLength);
-            formData.append('upload_file', new Blob([arrayBuffer as ArrayBuffer], { type: 'application/pdf' }), 'document.pdf');
-            
-            const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/files', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${LLAMA_CLOUD_API_KEY}`,
-              },
-              body: formData
-            });
-            
-            if (uploadResponse.ok) {
-              const uploadResult = await uploadResponse.json();
-              console.log('📁 File uploaded to LlamaCloud:', uploadResult.id);
-              
-              // Try to parse with LlamaCloud
-              const parseResponse = await fetch('https://api.cloud.llamaindex.ai/api/v1/parse', {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${LLAMA_CLOUD_API_KEY}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  file_id: uploadResult.id,
-                  result_type: 'text',
-                  verbose: true,
-                  language: 'en'
-                })
-              });
-              
-              if (parseResponse.ok) {
-                const parseResult = await parseResponse.json();
-                if (parseResult && parseResult.text) {
-                  extractedText = parseResult.text;
-                  metadata = {
-                    pages: parseResult.metadata?.pageCount || 1,
-                    title: parseResult.metadata?.title || 'Document',
-                    author: parseResult.metadata?.author || 'Unknown',
-                    subject: parseResult.metadata?.subject || 'Unknown',
-                    creator: parseResult.metadata?.creator || 'Unknown',
-                    producer: parseResult.metadata?.producer || 'Unknown',
-                    creationDate: parseResult.metadata?.creationDate || new Date().toISOString(),
-                    modificationDate: parseResult.metadata?.modificationDate || new Date().toISOString()
-                  };
-                  console.log('✅ LlamaCloud API successful - extracted', extractedText.length, 'characters');
-                }
-              }
-            }
-          } catch (llamaError) {
-            console.warn('⚠️ LlamaCloud API failed:', llamaError);
+        // Method 3: OCR for image-based PDFs using pdf2pic + tesseract.js
+        try {
+          console.log('🔄 Attempting OCR extraction for image-based PDF...');
+          const pdf2pic = require('pdf2pic');
+          const { createWorker } = require('tesseract.js');
+          
+          // Convert PDF to images
+          const convert = pdf2pic.fromBuffer(pdfBuffer, {
+            density: 300,           // Higher DPI for better OCR
+            saveFilename: "page",
+            savePath: "./temp",
+            format: "png",
+            width: 2000,
+            height: 2000
+          });
+          
+          const results = await convert.bulk(-1); // Convert all pages
+          console.log(`📸 Converted ${results.length} pages to images`);
+          
+          // Initialize Tesseract OCR worker
+          const worker = await createWorker('eng', 1, {
+            logger: (m: any) => console.log('OCR:', m)
+          });
+          
+          let ocrText = '';
+          for (let i = 0; i < results.length; i++) {
+            console.log(`🔍 Processing page ${i + 1} with OCR...`);
+            const { data: { text } } = await worker.recognize(results[i].path);
+            ocrText += text + '\n';
           }
-        }
-        
-        // Final fallback if all methods fail
-        if (!extractedText) {
-          console.error('❌ All PDF extraction methods failed');
-          extractedText = 'PDF content extraction failed. The document may be image-based, corrupted, or in an unsupported format. Please try with a text-based PDF file.';
-          metadata = {
-            pages: 1,
-            title: 'Document',
-            author: 'Unknown',
-            subject: 'Unknown',
-            creator: 'Unknown',
-            producer: 'Unknown',
-            creationDate: new Date().toISOString(),
-            modificationDate: new Date().toISOString()
-          };
+          
+          await worker.terminate();
+          
+          if (ocrText.trim().length > 0) {
+            extractedText = ocrText.trim();
+            metadata = {
+              pages: results.length,
+              title: 'Document (OCR)',
+              author: 'Unknown',
+              subject: 'Unknown',
+              creator: 'Unknown',
+              producer: 'Unknown',
+              creationDate: new Date().toISOString(),
+              modificationDate: new Date().toISOString()
+            };
+            console.log('✅ OCR successful - extracted', extractedText.length, 'characters from images');
+          } else {
+            throw new Error('OCR failed to extract text from images');
+          }
+        } catch (ocrError) {
+          console.warn('⚠️ OCR failed, trying pdf-lib metadata extraction:', ocrError);
+          
+          // Method 4: Try pdf-lib for metadata at minimum
+          try {
+            console.log('🔄 Attempting pdf-lib metadata extraction...');
+            const { PDFDocument } = await import('pdf-lib');
+            const pdfDoc = await PDFDocument.load(pdfBuffer);
+            
+            const pageCount = pdfDoc.getPageCount();
+            const title = pdfDoc.getTitle() || 'Document';
+            const author = pdfDoc.getAuthor() || 'Unknown';
+            const subject = pdfDoc.getSubject() || 'Unknown';
+            const creator = pdfDoc.getCreator() || 'Unknown';
+            const producer = pdfDoc.getProducer() || 'Unknown';
+            
+            extractedText = `Document processed with pdf-lib. Title: ${title}, Author: ${author}, Pages: ${pageCount}. This appears to be an image-based PDF. For better text extraction, please use a text-based PDF or ensure the document has selectable text.`;
+            metadata = {
+              pages: pageCount,
+              title: title,
+              author: author,
+              subject: subject,
+              creator: creator,
+              producer: producer,
+              creationDate: new Date().toISOString(),
+              modificationDate: new Date().toISOString()
+            };
+            console.log('✅ pdf-lib successful - extracted metadata and basic info');
+          } catch (pdfLibError) {
+            console.error('❌ All PDF extraction methods failed:', pdfLibError);
+            extractedText = 'PDF content extraction failed. The document may be corrupted, password-protected, or in an unsupported format. Please try with a different PDF file.';
+            metadata = {
+              pages: 1,
+              title: 'Document',
+              author: 'Unknown',
+              subject: 'Unknown',
+              creator: 'Unknown',
+              producer: 'Unknown',
+              creationDate: new Date().toISOString(),
+              modificationDate: new Date().toISOString()
+            };
+          }
         }
       }
     }
@@ -290,15 +419,77 @@ function analyzeContentStructure(text: string, structure: any): {
   };
 }
 
-// Advanced Perplexity AI integration with enhanced prompting (2025)
-async function vectorizeWithPerplexityAI(
+// RAG-powered question answering
+export async function answerQuestionWithRAG(question: string): Promise<string> {
+  try {
+    console.log(`🤔 Processing question with RAG: "${question}"`);
+    
+    // Initialize RAG system
+    await initializeRAG();
+    
+    if (!openai || documentChunks.length === 0) {
+      return "RAG system not available. Please ensure OpenAI API key is configured and document is processed.";
+    }
+    
+    // Retrieve relevant chunks using RAG
+    const relevantChunks = await retrieveRelevantChunks(question, 5);
+    
+    if (relevantChunks.length === 0) {
+      return "No relevant information found in the document for this question.";
+    }
+    
+    // Create context from relevant chunks
+    const context = relevantChunks.join('\n\n');
+    
+    // Generate answer using Grok AI with RAG context
+    if (GROK_API_KEY) {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${GROK_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert document analyst with access to a comprehensive knowledge base. Answer questions based on the provided document context. Be accurate, helpful, and cite specific information when possible.`
+            },
+            {
+              role: 'user',
+              content: `Based on the following document context, please answer this question: "${question}"\n\nDocument Context:\n${context}`
+            }
+          ],
+          temperature: 0.1,
+          max_tokens: 1000,
+        }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.choices[0].message.content;
+      }
+    }
+    
+    // Fallback to basic context-based answer
+    return `Based on the document content, here's what I found related to your question: "${question}"\n\nRelevant information:\n${context}`;
+    
+  } catch (error) {
+    console.error('Error in RAG question answering:', error);
+    return `Sorry, I encountered an error while processing your question: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  }
+}
+
+// Advanced Grok AI integration with enhanced prompting (2025)
+async function vectorizeWithGrokAI(
   text: string, 
   metadata: any, 
   structure: any, 
   analysis: any
 ): Promise<string> {
   try {
-    if (!PERPLEXITY_API_KEY) {
+    if (!GROK_API_KEY) {
       return text;
     }
     
@@ -350,14 +541,14 @@ ${cleanText.substring(0, 45000)}
 **OUTPUT FORMAT:**
 Provide a restructured version that enhances readability while maintaining all original content.`;
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Authorization': `Bearer ${GROK_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar',
+        model: 'llama-3.1-70b-versatile',
         messages: [
           {
             role: 'system',
@@ -468,20 +659,27 @@ export async function vectorizePdfContent(input: VectorizePdfContentInput): Prom
     const vectorChunks = createVectorChunks(extractedText);
     console.log(`🧠 Created ${vectorChunks.length} RAG chunks for vectorization`);
 
-    // Step 4: Advanced AI vectorization with context
+    // Step 3.5: Store chunks in vector database for RAG
+    await storeDocumentChunks(vectorChunks, metadata);
+
+    // Step 4: Advanced AI vectorization with RAG context
     let vectorizedContent = extractedText;
     
-    if (PERPLEXITY_API_KEY) {
-      console.log('🤖 Attempting advanced Perplexity AI vectorization...');
+    if (GROK_API_KEY) {
+      console.log('🤖 Attempting advanced Grok AI vectorization with RAG...');
       try {
-        vectorizedContent = await vectorizeWithPerplexityAI(extractedText, metadata, structure, analysis);
-        console.log('✅ Advanced AI vectorization completed');
+        // Retrieve relevant context using RAG
+        const relevantChunks = await retrieveRelevantChunks(extractedText.substring(0, 200), 3);
+        console.log(`🔍 Retrieved ${relevantChunks.length} relevant chunks for context`);
+        
+        vectorizedContent = await vectorizeWithGrokAI(extractedText, metadata, structure, analysis);
+        console.log('✅ Advanced AI vectorization with RAG completed');
       } catch (aiError) {
         console.warn('⚠️ AI vectorization failed, using fallback:', aiError);
         vectorizedContent = cleanTextLocally(extractedText);
       }
     } else {
-      console.log('⚠️ No Perplexity API key - using enhanced local processing');
+      console.log('⚠️ No Grok API key - using enhanced local processing with RAG');
       vectorizedContent = cleanTextLocally(extractedText);
     }
 

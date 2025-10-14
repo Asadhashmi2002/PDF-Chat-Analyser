@@ -6,8 +6,9 @@ import { useToast } from '../hooks/use-toast';
 import { askQuestion } from '../app/actions';
 import PdfViewer from './pdf-viewer';
 import ChatPanel from './chat-panel';
+import RAGChat from './rag-chat';
 import { Button } from './ui/button';
-import { FileText, MessageSquare, Home } from 'lucide-react';
+import { FileText, MessageSquare, Home, Brain } from 'lucide-react';
 
 interface MainViewProps {
   pdfFile: File;
@@ -21,6 +22,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAnswering, setIsAnswering] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [activeTab, setActiveTab] = useState<'chat' | 'rag'>('chat');
   const pdfViewerRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
 
@@ -167,6 +169,18 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
       }]);
     } finally {
       setIsAnswering(false);
+    }
+  };
+
+  // RAG-powered question handler
+  const handleRAGQuestion = async (question: string): Promise<string> => {
+    try {
+      // Import the RAG function dynamically
+      const { answerQuestionWithRAG } = await import('../ai/flows/vectorize-pdf-content');
+      return await answerQuestionWithRAG(question);
+    } catch (error) {
+      console.error('RAG question error:', error);
+      return `Sorry, I encountered an error with the RAG system: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   };
 
@@ -339,14 +353,43 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
       
       {/* Chat Panel - Always visible, full width on mobile */}
       <div className={`${!showPdfViewer ? 'flex' : 'hidden'} xl:flex flex-1 xl:border-l border-border bg-background h-full`}>
-        <ChatPanel
-          messages={messages}
-          onSubmit={handleQuestionSubmit}
-          onCitationClick={handleCitationClick}
-          isAnswering={isAnswering}
-          pdfFileName={pdfFile.name}
-          pdfContent={pdfText}
-        />
+        <div className="flex flex-col w-full h-full">
+          {/* Chat Type Tabs */}
+          <div className="flex border-b border-border bg-muted/30">
+            <Button
+              variant={activeTab === 'chat' ? 'default' : 'ghost'}
+              className="flex-1 rounded-none"
+              onClick={() => setActiveTab('chat')}
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Standard Chat
+            </Button>
+            <Button
+              variant={activeTab === 'rag' ? 'default' : 'ghost'}
+              className="flex-1 rounded-none"
+              onClick={() => setActiveTab('rag')}
+            >
+              <Brain className="w-4 h-4 mr-2" />
+              RAG Chat
+            </Button>
+          </div>
+          
+          {/* Chat Content */}
+          <div className="flex-1 overflow-hidden">
+            {activeTab === 'chat' ? (
+              <ChatPanel
+                messages={messages}
+                onSubmit={handleQuestionSubmit}
+                onCitationClick={handleCitationClick}
+                isAnswering={isAnswering}
+                pdfFileName={pdfFile.name}
+                pdfContent={pdfText}
+              />
+            ) : (
+              <RAGChat onQuestionSubmit={handleRAGQuestion} />
+            )}
+          </div>
+        </div>
       </div>
     </main>
   );

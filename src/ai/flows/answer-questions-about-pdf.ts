@@ -51,7 +51,9 @@ export async function answerQuestionsAboutPdf(input: AnswerQuestionsAboutPdfInpu
   }
 
   try {
-            // Google NotebookLM-style AI integration using multiple providers
+    console.log('Processing question with PDF text length:', cleanPdfText.length);
+    
+    // Google NotebookLM-style AI integration using multiple providers
     
     // Try Google Gemini first (like NotebookLM)
     const geminiApiKey = process.env.GOOGLE_API_KEY;

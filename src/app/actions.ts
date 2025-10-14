@@ -18,16 +18,23 @@ export async function processPdf(input: { pdfDataUri: string }): Promise<{ text?
     const { markdownContent } = await vectorizePdfContent({ pdfDataUri: input.pdfDataUri });
     return { text: markdownContent };
   } catch (e: any) {
+    console.error('PDF processing error:', e);
     
     // Provide more specific error messages
-    let errorMessage = 'Failed to process PDF.';
+    let errorMessage = 'An unexpected error occurred while processing the PDF.';
     if (e.message) {
       if (e.message.includes('password')) {
         errorMessage = 'PDF is password-protected. Please remove password protection and try again.';
       } else if (e.message.includes('corrupted')) {
         errorMessage = 'PDF appears to be corrupted. Please try a different file.';
-      } else if (e.message.includes('image-only')) {
-        errorMessage = 'PDF contains only images. Text extraction not possible.';
+      } else if (e.message.includes('image-only') || e.message.includes('image-based')) {
+        errorMessage = 'PDF contains only images. Text extraction not possible. Please use a PDF with selectable text.';
+      } else if (e.message.includes('text extraction failed')) {
+        errorMessage = 'Unable to extract text from this PDF. The PDF may be image-based, password-protected, or corrupted. Please try a different PDF file.';
+      } else if (e.message.includes('Invalid PDF')) {
+        errorMessage = 'Invalid PDF file format. Please ensure you uploaded a valid PDF document.';
+      } else if (e.message.includes('Empty PDF')) {
+        errorMessage = 'The PDF file appears to be empty. Please try a different file.';
       } else {
         errorMessage = `PDF processing failed: ${e.message}`;
       }

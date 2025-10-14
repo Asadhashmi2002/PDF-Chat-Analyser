@@ -77,9 +77,10 @@ async function vectorizeWithGroqAI(text: string): Promise<string> {
         .trim();
       
       return cleanStructured;
+    } else {
+      console.warn('Groq AI API error:', response.status, response.statusText);
+      return cleanText;
     }
-    
-    return cleanText;
   } catch (error) {
     return text.replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim();
   }
@@ -201,6 +202,19 @@ export async function vectorizePdfContent(input: VectorizePdfContentInput): Prom
         extractedText = readableLines.join(' ').trim();
       }
       
+      // Method 5: Fallback - extract any readable text from the buffer
+      if (!extractedText || extractedText.length < 10) {
+        // Look for any text patterns in the PDF
+        const textPattern = /[a-zA-Z][a-zA-Z0-9\s]{10,}/g;
+        const matches = textFromBuffer.match(textPattern);
+        if (matches && matches.length > 0) {
+          extractedText = matches
+            .join(' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
+      }
+      
       // Clean up the extracted text
       if (extractedText) {
         extractedText = extractedText
@@ -214,7 +228,7 @@ export async function vectorizePdfContent(input: VectorizePdfContentInput): Prom
             }
     
     if (!extractedText || extractedText.trim().length < 10) {
-      throw new Error('PDF text extraction failed. Please try a different PDF file.');
+      throw new Error('PDF text extraction failed. This PDF may be image-based, password-protected, or corrupted. Please try a different PDF file.');
     }
     
     

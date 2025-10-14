@@ -2,7 +2,7 @@
   # Build command for Next.js
   command = "npm run build"
   
-  # Directory to publish
+  # Directory to publish (Next.js default)
   publish = ".next"
   
   # Environment variables
@@ -10,11 +10,11 @@
     NODE_VERSION = "18"
     NPM_VERSION = "9"
 
-# Redirect rules for Next.js
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Redirect rules for Next.js (not needed for non-static export)
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
 
 # Headers for security and performance
 [[headers]]

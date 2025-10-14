@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import type { Message } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
-import { askQuestion } from '@/app/actions';
-import PdfViewer from '@/components/pdf-viewer';
-import ChatPanel from '@/components/chat-panel';
-import { Button } from '@/components/ui/button';
+import type { Message } from '../lib/types';
+import { useToast } from '../hooks/use-toast';
+import { askQuestion } from '../app/actions';
+import PdfViewer from './pdf-viewer';
+import ChatPanel from './chat-panel';
+import { Button } from './ui/button';
 import { FileText, MessageSquare, Home } from 'lucide-react';
 
 interface MainViewProps {

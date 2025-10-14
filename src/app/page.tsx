@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { processPdf } from '@/app/actions';
-import UploadView from '@/components/upload-view';
-import MainView from '@/components/main-view';
-import HomePage from '@/components/home-page';
+import { useToast } from '../hooks/use-toast';
+import { processPdf } from './actions';
+import UploadView from '../components/upload-view';
+import MainView from '../components/main-view';
+import HomePage from '../components/home-page';
 
 export default function Home() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);

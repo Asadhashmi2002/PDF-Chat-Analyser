@@ -8,9 +8,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Enable static export for Netlify
-  output: 'export',
-  trailingSlash: true,
+  // Configure for Netlify with serverless functions
+  // Remove static export to enable server actions
   images: {
     unoptimized: true,
     remotePatterns: [

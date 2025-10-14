@@ -8,7 +8,7 @@
  * - `OptimizeTokenUsageOutput` - The return type for the `optimizeTokenUsage` function, providing an answer to the user question with citations.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai} from '../ai/genkit';
 import {z} from 'genkit';
 
 const OptimizeTokenUsageInputSchema = z.object({

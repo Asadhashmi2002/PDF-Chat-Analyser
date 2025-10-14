@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, type FormEvent, type DragEvent, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from './ui/card';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
 import { Loader2, FileUp, CheckCircle2, Bot, ScanText, BrainCircuit, Sparkles, ArrowRight, Home } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { cn } from '../lib/utils';
+import { useToast } from '../hooks/use-toast';
 
 interface UploadViewProps {
   onUpload: (file: File) => void;

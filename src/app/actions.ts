@@ -1,8 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import { vectorizePdfContent } from '@/ai/flows/vectorize-pdf-content';
-import { answerQuestionsAboutPdf } from '@/ai/flows/answer-questions-about-pdf';
+import { vectorizePdfContent } from '../ai/flows/vectorize-pdf-content';
+import { answerQuestionsAboutPdf } from '../ai/flows/answer-questions-about-pdf';
 
 const ProcessPdfInputSchema = z.object({
   pdfDataUri: z.string().startsWith('data:application/pdf;base64,'),

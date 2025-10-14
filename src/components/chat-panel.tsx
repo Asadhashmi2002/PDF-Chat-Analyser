@@ -1,12 +1,12 @@
 'use client';
 
 import { type FormEvent, useRef, useEffect, useMemo, useState } from 'react';
-import type { Message } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import type { Message } from '../lib/types';
+import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
 import { Loader2, ArrowUp, Bot, User, FileText, Bookmark, Sparkles, ChevronDown } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { cn } from '../lib/utils';
 import { Badge } from './ui/badge';
 
 interface ChatPanelProps {

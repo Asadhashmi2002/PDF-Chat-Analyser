@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from './ui/skeleton';
 
 interface PdfViewerProps {
   fileUrl: string | null;

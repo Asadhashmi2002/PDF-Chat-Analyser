@@ -247,7 +247,7 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
 
         <Card className="border-white/10 bg-white/5 backdrop-blur-2xl shadow-2xl shadow-blue-500/10 rounded-2xl">
           <CardContent className="p-4 sm:p-8">
-            {isProcessing ? (
+            {isProcessing || isUploading ? (
                <div className="flex flex-col items-center justify-center h-48 sm:h-64 space-y-4 sm:space-y-6 transition-all duration-500">
                 <div className="relative">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-blue-500/10 flex items-center justify-center">

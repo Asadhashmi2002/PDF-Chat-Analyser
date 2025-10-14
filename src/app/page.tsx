@@ -43,6 +43,9 @@ export default function Home() {
     setUploadProgress(0);
     setShowHome(false);
     
+    // Ensure we show loading UI immediately
+    console.log('Starting upload process...');
+    
     // Simulate upload progress for large files
     const progressInterval = setInterval(() => {
       setUploadProgress(prev => {
@@ -84,6 +87,7 @@ export default function Home() {
     fileReader.onload = async () => {
       try {
         const dataUri = fileReader.result as string;
+        console.log('File loaded, starting server processing...');
         
         // Complete upload progress
         setUploadProgress(100);
@@ -93,6 +97,8 @@ export default function Home() {
         setIsUploading(false);
         setIsServerProcessing(true);
         setServerProcessingProgress(0);
+        
+        console.log('Server processing started...');
         
         // Simulate server processing progress
         const serverProgressInterval = setInterval(() => {
@@ -105,7 +111,9 @@ export default function Home() {
           });
         }, 500);
         
+        console.log('Calling processPdf...');
         const result = await processPdf({ pdfDataUri: dataUri });
+        console.log('processPdf result:', result);
         
         // Complete server processing
         clearInterval(serverProgressInterval);
@@ -116,6 +124,7 @@ export default function Home() {
         clearTimeout(timeoutId); // Clear timeout
         
         if (result.error || !result.text) {
+          console.log('PDF processing error:', result.error);
           toast({ title: "Error Processing PDF", description: result.error || "Could not extract text from PDF.", variant: 'destructive' });
           // Reset all states properly
           setPdfFile(null);
@@ -135,6 +144,7 @@ export default function Home() {
           // isProcessing will be set to false inside MainView after the PDF is rendered
         }
       } catch (e) {
+        console.log('Unexpected error during PDF processing:', e);
         clearTimeout(timeoutId); // Clear timeout
         clearInterval(progressInterval);
         // Clear server processing interval if it exists
@@ -192,6 +202,15 @@ export default function Home() {
   }
 
   if (!pdfFile || !pdfText || !pdfUrl) {
+    // Debug logging
+    console.log('UploadView state:', {
+      isProcessing,
+      isUploading,
+      isServerProcessing,
+      uploadProgress,
+      serverProcessingProgress
+    });
+    
     return <UploadView 
       onUpload={handlePdfUpload} 
       isProcessing={isProcessing || isUploading || isServerProcessing} 

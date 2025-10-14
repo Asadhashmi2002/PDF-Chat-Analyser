@@ -270,39 +270,52 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
   };
 
   return (
-    <main className="flex flex-col lg:grid lg:grid-cols-2 h-screen w-screen bg-background modern-scrollbar">
-      {/* Mobile/Tablet Toggle Buttons */}
-      <div className="lg:hidden flex border-b border-border bg-secondary/50 p-2 sm:p-4">
-        {onGoHome && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onGoHome}
-            className="rounded-none border-0 bg-white/80 hover:bg-white text-xs sm:text-sm"
-          >
-            <Home className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Home</span>
-            <span className="sm:hidden">🏠</span>
-          </Button>
-        )}
-        <Button
-          variant={!showPdfViewer ? "default" : "outline"}
-          className="flex-1 rounded-none border-0 text-xs sm:text-sm"
-          onClick={() => setShowPdfViewer(false)}
-        >
-          <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">Chat</span>
-          <span className="sm:hidden">💬</span>
-        </Button>
-        <Button
-          variant={showPdfViewer ? "default" : "outline"}
-          className="flex-1 rounded-none border-0 text-xs sm:text-sm"
-          onClick={() => setShowPdfViewer(true)}
-        >
-          <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-          <span className="hidden sm:inline">PDF</span>
-          <span className="sm:hidden">📄</span>
-        </Button>
+    <main className="flex flex-col lg:grid lg:grid-cols-2 h-screen w-full bg-background modern-scrollbar overflow-hidden">
+      {/* Modern Mobile/Tablet Toggle Buttons */}
+      <div className="lg:hidden modern-tab-container border-b border-slate-700/50 p-3 sm:p-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {onGoHome && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onGoHome}
+              className="modern-tab-button rounded-xl bg-slate-700/50 hover:bg-slate-600/70 text-slate-200 hover:text-white transition-all duration-300 hover:scale-105 shadow-md border border-slate-600/30 backdrop-blur-sm"
+            >
+              <Home className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <span className="font-medium">Home</span>
+            </Button>
+          )}
+          
+          <div className="flex-1 flex bg-slate-800/50 rounded-2xl p-1 shadow-inner border border-slate-700/50">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`modern-tab-button flex-1 rounded-xl transition-all duration-300 font-medium ${
+                !showPdfViewer 
+                  ? 'modern-tab-active text-white shadow-lg hover:scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+              onClick={() => setShowPdfViewer(false)}
+            >
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <span>Chat</span>
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`modern-tab-button flex-1 rounded-xl transition-all duration-300 font-medium ${
+                showPdfViewer 
+                  ? 'modern-tab-pdf-active text-white shadow-lg hover:scale-105' 
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+              }`}
+              onClick={() => setShowPdfViewer(true)}
+            >
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <span>PDF</span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* PDF Viewer - Hidden on mobile, visible on tablet+ */}
@@ -325,7 +338,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
       </div>
       
       {/* Chat Panel - Always visible, full width on mobile */}
-      <div className={`${!showPdfViewer ? 'flex' : 'hidden'} lg:flex flex-1 lg:border-l border-border bg-background`}>
+      <div className={`${!showPdfViewer ? 'flex' : 'hidden'} lg:flex flex-1 lg:border-l border-border bg-background h-full`}>
         <ChatPanel
           messages={messages}
           onSubmit={handleQuestionSubmit}

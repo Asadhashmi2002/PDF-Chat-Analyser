@@ -244,8 +244,8 @@ export default function ChatPanel({
 
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <header className="flex items-center justify-between p-3 sm:p-4 border-b shrink-0 bg-secondary/50">
+    <div className="flex flex-col h-full w-full bg-background mobile-chat-container">
+      <header className="flex items-center justify-between p-3 sm:p-4 border-b shrink-0 bg-secondary/50 flex-shrink-0 mobile-chat-header">
         <div className="flex items-center min-w-0 flex-1">
           <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3 text-primary flex-shrink-0" />
           <h2 className="text-sm sm:text-lg font-semibold truncate" title={pdfFileName}>
@@ -261,7 +261,7 @@ export default function ChatPanel({
         )}
       </header>
       
-      <div className="flex-1 relative overflow-y-auto chat-scrollbar modern-scrollbar" ref={scrollAreaRef}>
+      <div className="flex-1 relative overflow-y-auto chat-scrollbar modern-scrollbar min-h-0 mobile-chat-messages" ref={scrollAreaRef}>
         <div className="p-3 sm:p-6 space-y-4 sm:space-y-8">
           {messages.map((message, index) => (
             <div
@@ -355,7 +355,7 @@ export default function ChatPanel({
         )}
       </div>
       
-      <footer className="p-2 sm:p-4 border-t shrink-0 bg-secondary/50">
+      <footer className="p-2 sm:p-4 border-t shrink-0 bg-secondary/50 flex-shrink-0 mobile-chat-footer">
 
         {/* Dynamic Content-Based Suggestions - Only show after analysis */}
         {generateDynamicSuggestions.length > 0 && (

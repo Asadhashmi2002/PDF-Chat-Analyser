@@ -64,19 +64,19 @@ export async function answerQuestionsAboutPdf(input: AnswerQuestionsAboutPdfInpu
     
     // Advanced RAG-powered AI integration using multiple providers (2025)
     
-    // PRIMARY: Try Perplexity API first (most advanced for 2025)
-    const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
-    if (perplexityApiKey) {
+    // PRIMARY: Try Grok AI first (most advanced for 2025)
+    const grokApiKey = process.env.GROK_API_KEY;
+    if (grokApiKey) {
       try {
-        console.log('Attempting Perplexity API with RAG...');
-        const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+        console.log('Attempting Grok AI with RAG...');
+        const grokResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${perplexityApiKey}`,
+            'Authorization': `Bearer ${grokApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'sonar',
+            model: 'llama-3.1-8b-instant',
             messages: [
               {
                 role: 'system',
@@ -127,12 +127,12 @@ Provide a comprehensive, well-structured response with proper citations and refe
           }),
         });
 
-        if (perplexityResponse.ok) {
-          const perplexityData = await perplexityResponse.json();
-          const answer = perplexityData.choices?.[0]?.message?.content || '';
+        if (grokResponse.ok) {
+          const grokData = await grokResponse.json();
+          const answer = grokData.choices?.[0]?.message?.content || '';
           
           if (answer.trim()) {
-            console.log('✓ Perplexity API success');
+            console.log('✓ Grok AI success');
             
             // Enhanced response processing - ensure detailed, non-generic responses
             let cleanAnswer = answer
@@ -183,16 +183,16 @@ Provide a comprehensive, well-structured response with proper citations and refe
             return { answer: cleanAnswer };
           }
         } else {
-          const errorText = await perplexityResponse.text();
-          console.error('Perplexity API error:', perplexityResponse.status, errorText);
+          const errorText = await grokResponse.text();
+          console.error('Grok AI error:', grokResponse.status, errorText);
         }
       } catch (error) {
-        console.error('Perplexity API exception:', error);
+        console.error('Grok AI exception:', error);
       }
     }
     
-    // Fallback: No other AI providers - only Perplexity
-    console.log('⚠️ Perplexity API not available - using fallback response');
+    // Fallback: No other AI providers - only Grok AI
+    console.log('⚠️ Grok AI not available - using fallback response');
     
     // Extract key information from the document for a detailed response
     const documentLines = cleanPdfText.split('\n').filter(line => line.trim().length > 0);
@@ -201,13 +201,13 @@ Provide a comprehensive, well-structured response with proper citations and refe
     return {
       answer: `**Advanced AI Analysis Configuration Required**
 
-**Current Status:** Perplexity AI integration not configured for document analysis.
+**Current Status:** Grok AI integration not configured for document analysis.
 
-**Required Configuration:** Perplexity API key must be configured to enable advanced document processing and intelligent question-answering.
+**Required Configuration:** Grok AI API key must be configured to enable advanced document processing and intelligent question-answering.
 
 **Setup Process:**
-1. Obtain API key from: https://www.perplexity.ai/settings/api
-2. Configure environment variable: PERPLEXITY_API_KEY=your_actual_key_here
+1. Obtain API key from: https://console.groq.com/keys
+2. Configure environment variable: GROK_API_KEY=your_actual_key_here
 3. Restart the application to activate AI capabilities
 
 **Document Analysis Preview:**

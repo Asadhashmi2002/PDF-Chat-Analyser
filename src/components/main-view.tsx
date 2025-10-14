@@ -270,9 +270,9 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
   };
 
   return (
-    <main className="flex flex-col lg:grid lg:grid-cols-2 h-screen w-full bg-background modern-scrollbar overflow-hidden">
+    <main className="flex flex-col xl:grid xl:grid-cols-2 h-screen w-full bg-background modern-scrollbar overflow-hidden">
       {/* Modern Mobile/Tablet Toggle Buttons */}
-      <div className="lg:hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 p-3 sm:p-4 shadow-lg">
+      <div className="mobile-tab-container block xl:hidden bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700/50 p-3 sm:p-4 shadow-lg">
         <div className="flex items-center gap-2 sm:gap-3">
           {onGoHome && (
             <Button
@@ -319,7 +319,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
       </div>
 
       {/* PDF Viewer - Hidden on mobile, visible on tablet+ */}
-      <div className={`${showPdfViewer ? 'flex' : 'hidden'} lg:block relative`}>
+      <div className={`${showPdfViewer ? 'flex' : 'hidden'} xl:block relative`}>
         {/* Desktop Home Button */}
         {onGoHome && (
           <div className="absolute top-4 left-4 z-10">
@@ -338,7 +338,7 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
       </div>
       
       {/* Chat Panel - Always visible, full width on mobile */}
-      <div className={`${!showPdfViewer ? 'flex' : 'hidden'} lg:flex flex-1 lg:border-l border-border bg-background h-full`}>
+      <div className={`${!showPdfViewer ? 'flex' : 'hidden'} xl:flex flex-1 xl:border-l border-border bg-background h-full`}>
         <ChatPanel
           messages={messages}
           onSubmit={handleQuestionSubmit}

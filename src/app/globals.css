@@ -474,6 +474,15 @@ html {
   }
 }
 
+/* Ensure mobile tabs are visible on smaller screens */
+@media (max-width: 1279px) {
+  .mobile-tab-container {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
 /* Tablet-specific improvements */
 @media (min-width: 641px) and (max-width: 1024px) {
   /* Optimize for tablet landscape */

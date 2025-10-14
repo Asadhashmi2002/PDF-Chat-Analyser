@@ -12,6 +12,8 @@ export default function Home() {
   const [pdfText, setPdfText] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [showHome, setShowHome] = useState(true);
   const { toast } = useToast();
 
@@ -34,11 +36,25 @@ export default function Home() {
       return;
     }
     
-    setIsProcessing(true);
+    // Start upload process
+    setIsUploading(true);
+    setUploadProgress(0);
     setShowHome(false);
+    
+    // Simulate upload progress for large files
+    const progressInterval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 95) {
+          clearInterval(progressInterval);
+          return 95;
+        }
+        return prev + Math.random() * 10;
+      });
+    }, 200);
     
     // Add timeout to prevent stuck loading state
     const timeoutId = setTimeout(() => {
+      clearInterval(progressInterval);
       toast({
         title: "Processing Timeout",
         description: "PDF processing is taking longer than expected. Please try again.",
@@ -48,8 +64,10 @@ export default function Home() {
       setPdfText(null);
       setPdfUrl(null);
       setIsProcessing(false);
+      setIsUploading(false);
+      setUploadProgress(0);
       setShowHome(true);
-    }, 60000); // 60 seconds timeout
+    }, 120000); // 2 minutes timeout for large files
 
     if (pdfUrl) {
       URL.revokeObjectURL(pdfUrl);
@@ -64,6 +82,15 @@ export default function Home() {
     fileReader.onload = async () => {
       try {
         const dataUri = fileReader.result as string;
+        
+        // Complete upload progress
+        setUploadProgress(100);
+        clearInterval(progressInterval);
+        
+        // Now start processing
+        setIsUploading(false);
+        setIsProcessing(true);
+        
         const result = await processPdf({ pdfDataUri: dataUri });
 
         clearTimeout(timeoutId); // Clear timeout
@@ -75,6 +102,8 @@ export default function Home() {
           setPdfText(null);
           setPdfUrl(null);
           setIsProcessing(false);
+          setIsUploading(false);
+          setUploadProgress(0);
           setShowHome(true);
           URL.revokeObjectURL(newPdfUrl);
         } else {
@@ -85,12 +114,15 @@ export default function Home() {
         }
       } catch (e) {
         clearTimeout(timeoutId); // Clear timeout
+        clearInterval(progressInterval);
         toast({ title: "Error", description: "An unexpected error occurred while processing the PDF.", variant: 'destructive' });
         // Reset all states properly
         setPdfFile(null);
         setPdfText(null);
         setPdfUrl(null);
         setIsProcessing(false);
+        setIsUploading(false);
+        setUploadProgress(0);
         setShowHome(true);
         URL.revokeObjectURL(newPdfUrl);
       }
@@ -98,12 +130,15 @@ export default function Home() {
 
     fileReader.onerror = () => {
         clearTimeout(timeoutId); // Clear timeout
+        clearInterval(progressInterval);
         toast({ title: "Error", description: "Failed to read the PDF file.", variant: 'destructive' });
         // Reset all states properly
         setPdfFile(null);
         setPdfText(null);
         setPdfUrl(null);
         setIsProcessing(false);
+        setIsUploading(false);
+        setUploadProgress(0);
         setShowHome(true);
         URL.revokeObjectURL(newPdfUrl);
     };
@@ -114,6 +149,8 @@ export default function Home() {
     setPdfText(null);
     setPdfUrl(null);
     setIsProcessing(false);
+    setIsUploading(false);
+    setUploadProgress(0);
     setShowHome(true);
   };
 
@@ -122,7 +159,13 @@ export default function Home() {
   }
 
   if (!pdfFile || !pdfText || !pdfUrl) {
-    return <UploadView onUpload={handlePdfUpload} isProcessing={isProcessing} onGoHome={goToHome} />;
+    return <UploadView 
+      onUpload={handlePdfUpload} 
+      isProcessing={isProcessing || isUploading} 
+      onGoHome={goToHome}
+      uploadProgress={uploadProgress}
+      isUploading={isUploading}
+    />;
   }
 
   return <MainView pdfFile={pdfFile} pdfText={pdfText} pdfUrl={pdfUrl} stopProcessing={() => setIsProcessing(false)} onGoHome={goToHome} />;

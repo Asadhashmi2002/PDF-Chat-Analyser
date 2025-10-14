@@ -1,194 +1,60 @@
-# Google NotebookLM Clone - Deployment Guide
+# 🚀 Netlify Deployment Guide
 
-## 🚀 **Quick Deployment Options**
+## ✅ Ready for Deployment!
 
-### **Option 1: Vercel (Recommended)**
+Your PDF Chat Analyser is now configured for Netlify deployment with:
 
-1. **Install Vercel CLI:**
-   ```bash
-   npm i -g vercel
-   ```
+- ✅ **Perplexity AI Integration** - Advanced RAG for document analysis
+- ✅ **Netlify Configuration** - `netlify.toml`, `_redirects`, `_headers`
+- ✅ **Environment Variables** - Configured for production
+- ✅ **Security Headers** - Production-ready security
 
-2. **Deploy:**
-   ```bash
-   vercel
-   ```
+## 🔑 Environment Variables Required
 
-3. **Set Environment Variables:**
-   ```bash
-   vercel env add GOOGLE_API_KEY
-   # Enter your Google Gemini API key
-   ```
-
-4. **Redeploy:**
-   ```bash
-   vercel --prod
-   ```
-
-### **Option 2: Netlify**
-
-1. **Build the project:**
-   ```bash
-   npm run build
-   npm run export
-   ```
-
-2. **Deploy to Netlify:**
-   - Drag and drop the `out` folder to Netlify
-   - Or connect your GitHub repository
-
-3. **Set Environment Variables:**
-   - Go to Site Settings > Environment Variables
-   - Add `GOOGLE_API_KEY` with your API key
-
-### **Option 3: Render**
-
-1. **Create render.yaml:**
-   ```yaml
-   services:
-     - type: web
-       name: notebooklm-clone
-       env: node
-       buildCommand: npm install && npm run build
-       startCommand: npm start
-       envVars:
-         - key: GOOGLE_API_KEY
-           sync: false
-   ```
-
-2. **Deploy:**
-   - Connect your repository
-   - Set environment variables
-   - Deploy
-
-## 🔧 **Environment Variables**
-
-### **Required for AI Integration:**
-```bash
-# Google Gemini (Recommended - Like NotebookLM)
-GOOGLE_API_KEY=your_google_gemini_api_key_here
-
-# OR Groq API (Get your key from https://console.groq.com/keys)
-GROQ_API_KEY=your_groq_api_key_here
-
-# OR OpenAI (Optional)
-OPENAI_API_KEY=sk-your_openai_api_key_here
+### In Netlify Dashboard:
+```
+PERPLEXITY_API_KEY=your_perplexity_api_key_here
+NODE_ENV=production
 ```
 
-### **Get API Keys:**
+**Get your Perplexity API key from**: [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api)
 
-#### **Google Gemini (Free)**
-1. Go to [Google AI Studio](https://aistudio.google.com/)
-2. Create a new project
-3. Generate API key
-4. Add to environment variables
+## 🚀 Deployment Steps
 
-#### **Groq API (Free)**
-1. Go to [Groq Console](https://console.groq.com/)
-2. Sign up for free account
-3. Generate API key
-4. Already configured in the app
+1. **Connect to Netlify**
+   - Link your GitHub repository
+   - Netlify will auto-detect Next.js
 
-## 📱 **Mobile Deployment**
+2. **Set Environment Variables**
+   - Go to Site Settings → Environment Variables
+   - Add `PERPLEXITY_API_KEY` with your actual key
+   - Add `NODE_ENV=production`
 
-### **Responsive Design:**
-- ✅ Mobile-first approach
-- ✅ Touch-optimized controls
-- ✅ Toggle interface for mobile
-- ✅ Responsive PDF viewer
+3. **Deploy**
+   - Netlify will automatically build and deploy
+   - Your site will be live at `https://your-site.netlify.app`
 
-### **Mobile Features:**
-- ✅ Chat/PDF toggle buttons
-- ✅ Touch-friendly citations
-- ✅ Optimized input fields
-- ✅ Mobile-optimized suggestions
+## 🎯 Features Ready
 
-## 🎯 **Performance Optimization**
+- ✅ PDF Upload & Processing
+- ✅ AI-Powered Question Answering
+- ✅ Advanced RAG Vectorization
+- ✅ Document Analysis with Citations
+- ✅ Mobile-Responsive Design
+- ✅ Production Security Headers
 
-### **Build Optimization:**
-```bash
-# Production build
-npm run build
+## 🔧 Configuration Files
 
-# Analyze bundle
-npm run analyze
+- `netlify.toml` - Build and function configuration
+- `_redirects` - API routing
+- `public/_headers` - Security headers
+- `env.example` - Environment variable template
 
-# Export static files
-npm run export
-```
+## 📱 Testing
 
-### **Runtime Optimization:**
-- ✅ Efficient PDF processing
-- ✅ Minimal memory usage
-- ✅ Fast AI responses
-- ✅ Optimized images and assets
+After deployment:
+1. Upload a PDF document
+2. Ask questions about the content
+3. Get AI-powered responses with citations
 
-## 🔒 **Security Considerations**
-
-### **API Key Security:**
-- ✅ Environment variables only
-- ✅ No hardcoded keys
-- ✅ Secure API calls
-- ✅ Error handling
-
-### **File Upload Security:**
-- ✅ PDF validation only
-- ✅ File size limits
-- ✅ Secure processing
-- ✅ No file storage
-
-## 📊 **Monitoring & Analytics**
-
-### **Performance Monitoring:**
-- ✅ Build time optimization
-- ✅ Runtime performance
-- ✅ AI response times
-- ✅ Error tracking
-
-### **User Analytics:**
-- ✅ Document upload tracking
-- ✅ Chat interaction metrics
-- ✅ Mobile usage statistics
-- ✅ Performance monitoring
-
-## 🚀 **Production Checklist**
-
-### **Before Deployment:**
-- ✅ Environment variables set
-- ✅ API keys configured
-- ✅ Build optimization
-- ✅ Error handling tested
-- ✅ Mobile responsiveness verified
-
-### **After Deployment:**
-- ✅ Test PDF upload
-- ✅ Test AI responses
-- ✅ Test mobile interface
-- ✅ Test citation navigation
-- ✅ Monitor performance
-
-## 📱 **Mobile Testing**
-
-### **Test on Different Devices:**
-- ✅ iPhone (Safari)
-- ✅ Android (Chrome)
-- ✅ iPad (Safari)
-- ✅ Desktop (Chrome, Firefox, Safari)
-
-### **Mobile Features to Test:**
-- ✅ PDF upload
-- ✅ Chat interface
-- ✅ Toggle functionality
-- ✅ Citation navigation
-- ✅ Smart suggestions
-
-## 🎯 **Final Deployment Steps**
-
-1. **Choose deployment platform**
-2. **Set up environment variables**
-3. **Deploy the application**
-4. **Test all features**
-5. **Monitor performance**
-6. **Share the URL**
-
-**Your Google NotebookLM clone is ready for deployment!** 🎉
+**Ready to deploy!** 🎉

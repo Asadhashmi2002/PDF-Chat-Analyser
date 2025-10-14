@@ -1,166 +1,322 @@
-# Netlify Deployment Guide for PDF Chat Analyser
+# Netlify Deployment Guide
 
-## 🚀 Quick Deploy to Netlify
+## 🚀 Deploy PDF Chat Analyser to Netlify
 
-### Option 1: Deploy from GitHub (Recommended)
+This guide will help you deploy your PDF Chat Analyser to Netlify with Perplexity API integration.
 
-1. **Connect to Netlify:**
-   - Go to [netlify.com](https://netlify.com)
-   - Sign up/Login with your GitHub account
-   - Click "New site from Git"
-   - Choose "GitHub" and select your repository: `Asadhashmi2002/PDF-Chat-Analyser`
+---
 
-2. **Configure Build Settings:**
-   ```
-   Build command: npm run build
-   Publish directory: .next
-   ```
+## 📋 Prerequisites
 
-3. **Set Environment Variables:**
-   - Go to Site settings → Environment variables
-   - Add the following variables:
-   ```
-   GOOGLE_API_KEY=your_google_gemini_api_key_here
-   GROQ_API_KEY=your_groq_api_key_here
-   NODE_ENV=production
-   ```
+1. **Netlify Account**: Sign up at [netlify.com](https://netlify.com)
+2. **GitHub Repository**: Your code should be in a GitHub repository
+3. **Perplexity API Key**: Get from [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api)
 
-4. **Deploy:**
-   - Click "Deploy site"
-   - Wait for build to complete
-   - Your site will be live at `https://your-site-name.netlify.app`
+---
 
-### Option 2: Manual Deploy
+## 🔧 Step 1: Configure Environment Variables
 
-1. **Build the project:**
-   ```bash
-   npm run build
-   ```
+### In Netlify Dashboard:
 
-2. **Deploy to Netlify:**
-   - Install Netlify CLI: `npm install -g netlify-cli`
-   - Login: `netlify login`
-   - Deploy: `netlify deploy --prod --dir=out`
+1. Go to your site dashboard
+2. Navigate to **Site settings** → **Environment variables**
+3. Add the following variables:
 
-## 🔧 Configuration Files
+```bash
+# Required: Perplexity API Key
+PERPLEXITY_API_KEY=pplx-your_actual_api_key_here
 
-### netlify.toml
+# Optional: Application settings
+NODE_ENV=production
+NEXT_TELEMETRY_DISABLED=1
+```
+
+### Environment Variables Explained:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PERPLEXITY_API_KEY` | ✅ Yes | Your Perplexity API key for AI processing |
+| `NODE_ENV` | ❌ No | Set to "production" for optimization |
+| `NEXT_TELEMETRY_DISABLED` | ❌ No | Disables Next.js telemetry |
+
+---
+
+## 🏗️ Step 2: Build Configuration
+
+The project includes these Netlify configuration files:
+
+### `netlify.toml`
 ```toml
 [build]
   command = "npm run build"
-  publish = "out"
-  
+  publish = ".next"
+
 [build.environment]
   NODE_VERSION = "18"
-  NPM_VERSION = "9"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+  NEXT_TELEMETRY_DISABLED = "1"
 ```
 
-### _redirects
+### `_redirects`
 ```
 /*    /index.html   200
 ```
 
-### public/_headers
+### `public/_headers`
 ```
 /*
   X-Frame-Options: DENY
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
   X-XSS-Protection: 1; mode=block
-
-/static/*
-  Cache-Control: public, max-age=31536000, immutable
-
-/api/*
-  Cache-Control: no-cache, no-store, must-revalidate
+  X-Content-Type-Options: nosniff
 ```
-
-## 🌐 Environment Variables
-
-### Required Variables:
-- `GOOGLE_API_KEY` - Google Gemini API key
-- `GROQ_API_KEY` - Groq API key (fallback)
-
-### Optional Variables:
-- `OPENAI_API_KEY` - OpenAI API key
-- `NODE_ENV` - Set to "production"
-
-## 📱 Features After Deployment
-
-✅ **Static Site Generation** - Fast loading times
-✅ **CDN Distribution** - Global content delivery
-✅ **Automatic HTTPS** - Secure connections
-✅ **Custom Domain** - Use your own domain
-✅ **Form Handling** - Built-in form processing
-✅ **Serverless Functions** - API routes work as serverless functions
-
-## 🔒 Security Features
-
-✅ **Security Headers** - XSS protection, content type sniffing prevention
-✅ **HTTPS Enforcement** - Automatic SSL certificates
-✅ **Environment Variables** - Secure API key storage
-✅ **CORS Protection** - Cross-origin request security
-
-## 🚀 Performance Optimizations
-
-✅ **Static Export** - Pre-built pages for faster loading
-✅ **Image Optimization** - Optimized images for web
-✅ **Caching Headers** - Proper cache control for static assets
-✅ **CDN Distribution** - Global content delivery network
-
-## 📊 Monitoring & Analytics
-
-✅ **Build Logs** - Detailed deployment logs
-✅ **Performance Metrics** - Core Web Vitals tracking
-✅ **Error Tracking** - Automatic error monitoring
-✅ **Uptime Monitoring** - Site availability tracking
-
-## 🔄 Continuous Deployment
-
-✅ **Auto Deploy** - Automatic deployments on git push
-✅ **Branch Deploys** - Deploy preview branches
-✅ **Rollback** - Easy rollback to previous versions
-✅ **Build Hooks** - Custom deployment triggers
-
-## 🛠️ Troubleshooting
-
-### Build Failures:
-1. Check Node.js version (should be 18+)
-2. Verify all dependencies are installed
-3. Check for TypeScript errors
-4. Ensure environment variables are set
-
-### Runtime Issues:
-1. Check browser console for errors
-2. Verify API keys are correctly set
-3. Check network tab for failed requests
-4. Test with different browsers
-
-### Performance Issues:
-1. Enable gzip compression
-2. Optimize images
-3. Check bundle size
-4. Use Netlify's performance insights
-
-## 📞 Support
-
-- **Netlify Docs:** https://docs.netlify.com/
-- **Next.js Static Export:** https://nextjs.org/docs/advanced-features/static-html-export
-- **GitHub Repository:** https://github.com/Asadhashmi2002/PDF-Chat-Analyser
-
-## 🎯 Next Steps After Deployment
-
-1. **Set up custom domain** (optional)
-2. **Configure analytics** (Google Analytics, etc.)
-3. **Set up monitoring** (Uptime monitoring, error tracking)
-4. **Optimize performance** (Image optimization, caching)
-5. **Test all features** (PDF upload, chat, AI responses)
 
 ---
 
-**Your PDF Chat Analyser is now ready for production! 🎉**
+## 🚀 Step 3: Deploy to Netlify
+
+### Option A: Connect GitHub Repository
+
+1. **Login to Netlify**
+   - Go to [netlify.com](https://netlify.com)
+   - Sign in with your account
+
+2. **New Site from Git**
+   - Click "New site from Git"
+   - Choose "GitHub" as provider
+   - Select your repository
+
+3. **Build Settings**
+   - Build command: `npm run build`
+   - Publish directory: `.next`
+   - Node version: `18`
+
+4. **Environment Variables**
+   - Go to Site settings → Environment variables
+   - Add `PERPLEXITY_API_KEY=your_key_here`
+
+5. **Deploy**
+   - Click "Deploy site"
+   - Wait for build to complete
+
+### Option B: Manual Deploy
+
+1. **Build Locally**
+   ```bash
+   npm run build
+   ```
+
+2. **Deploy Folder**
+   - Drag and drop the `.next` folder to Netlify
+   - Or use Netlify CLI: `netlify deploy --prod`
+
+---
+
+## 🔍 Step 4: Verify Deployment
+
+### Check These URLs:
+
+1. **Main Site**: `https://your-site-name.netlify.app`
+2. **API Health**: `https://your-site-name.netlify.app/api/health` (if implemented)
+
+### Test Features:
+
+1. **PDF Upload**: Upload a test PDF
+2. **AI Processing**: Ask questions about the PDF
+3. **Error Handling**: Test without API key
+
+---
+
+## 🛠️ Step 5: Configure Custom Domain (Optional)
+
+1. **Add Domain**
+   - Go to Site settings → Domain management
+   - Add your custom domain
+   - Configure DNS records
+
+2. **SSL Certificate**
+   - Netlify provides free SSL
+   - Automatically configured
+
+---
+
+## 📊 Step 6: Monitor Performance
+
+### Netlify Analytics:
+
+1. **Site Analytics**
+   - View visitor statistics
+   - Monitor page performance
+   - Track form submissions
+
+2. **Build Logs**
+   - Check build status
+   - Debug deployment issues
+   - Monitor build times
+
+---
+
+## 🔧 Troubleshooting
+
+### Common Issues:
+
+#### Build Fails
+```bash
+# Check Node version
+NODE_VERSION = "18"
+
+# Clear cache and rebuild
+npm run clean
+npm run build
+```
+
+#### API Not Working
+```bash
+# Verify environment variables
+PERPLEXITY_API_KEY=pplx-your_key_here
+
+# Check API key format
+# Should start with "pplx-"
+```
+
+#### PDF Upload Issues
+```bash
+# Check file size limits
+# Netlify: 100MB max
+# Consider file size optimization
+```
+
+---
+
+## 🎯 Production Optimizations
+
+### Performance:
+
+1. **Image Optimization**
+   - Use Next.js Image component
+   - Optimize PDF thumbnails
+   - Enable WebP format
+
+2. **Caching**
+   - Static assets cached
+   - API responses optimized
+   - CDN distribution
+
+3. **Security**
+   - HTTPS enforced
+   - Security headers configured
+   - API key protection
+
+---
+
+## 📈 Monitoring & Analytics
+
+### Netlify Features:
+
+1. **Build Analytics**
+   - Build success rate
+   - Build duration
+   - Error tracking
+
+2. **Performance Monitoring**
+   - Core Web Vitals
+   - Page load times
+   - User experience metrics
+
+3. **Function Logs**
+   - API call logs
+   - Error debugging
+   - Performance metrics
+
+---
+
+## 🔄 Continuous Deployment
+
+### Automatic Deploys:
+
+1. **Git Integration**
+   - Push to main branch
+   - Automatic build trigger
+   - Preview deployments
+
+2. **Branch Deploys**
+   - Feature branch previews
+   - Staging environment
+   - Production deployment
+
+---
+
+## 💰 Cost Considerations
+
+### Netlify Pricing:
+
+| Plan | Price | Features |
+|------|-------|----------|
+| **Starter** | Free | 100GB bandwidth, 300 build minutes |
+| **Pro** | $19/month | 1TB bandwidth, 1000 build minutes |
+| **Business** | $99/month | 2TB bandwidth, 2000 build minutes |
+
+### Perplexity API Costs:
+
+- **sonar model**: ~$0.001 per query
+- **sonar-pro model**: ~$0.002 per query
+- **sonar-deep-research**: ~$0.01 per query
+
+---
+
+## 🎉 Success Checklist
+
+- [ ] Repository connected to Netlify
+- [ ] Environment variables configured
+- [ ] Build successful
+- [ ] Site accessible
+- [ ] PDF upload working
+- [ ] AI Q&A functional
+- [ ] Custom domain (optional)
+- [ ] SSL certificate active
+- [ ] Performance optimized
+
+---
+
+## 📞 Support
+
+### If You Need Help:
+
+1. **Netlify Documentation**: [docs.netlify.com](https://docs.netlify.com)
+2. **Next.js Deployment**: [nextjs.org/docs/deployment](https://nextjs.org/docs/deployment)
+3. **Perplexity API**: [docs.perplexity.ai](https://docs.perplexity.ai)
+
+### Common Commands:
+
+```bash
+# Local development
+npm run dev
+
+# Production build
+npm run build
+
+# Start production server
+npm run start
+
+# Deploy to Netlify
+netlify deploy --prod
+```
+
+---
+
+## 🎯 Final Notes
+
+Your PDF Chat Analyser is now ready for production deployment on Netlify with:
+
+- ✅ **Perplexity API Integration**
+- ✅ **Advanced RAG Capabilities**
+- ✅ **Large PDF Support** (up to 115MB)
+- ✅ **Secure Environment**
+- ✅ **Optimized Performance**
+- ✅ **Automatic Deployments**
+
+**Deploy URL**: `https://your-site-name.netlify.app`
+
+---
+
+**Last Updated**: October 14, 2025  
+**Version**: 1.0.0 (Netlify Ready)  
+**Status**: Ready for Production 🚀

@@ -2,28 +2,30 @@
   # Build command for Next.js
   command = "npm run build"
   
-  # Directory to publish (Next.js default)
+  # Directory to publish
   publish = ".next"
-  
-  # Environment variables
-  [build.environment]
-    NODE_VERSION = "18"
-    NPM_VERSION = "9"
 
-# Redirect rules for Next.js (not needed for non-static export)
-# [[redirects]]
-#   from = "/*"
-#   to = "/index.html"
-#   status = 200
+[build.environment]
+  # Node.js version
+  NODE_VERSION = "18"
+  
+  # Next.js configuration
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Redirects for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 
 # Headers for security and performance
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    X-XSS-Protection = "1; mode=block"
 
 # Headers for static assets
 [[headers]]
@@ -36,3 +38,6 @@
   for = "/api/*"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
+
+# Environment variables (set these in Netlify dashboard)
+# PERPLEXITY_API_KEY = "your_perplexity_api_key_here"

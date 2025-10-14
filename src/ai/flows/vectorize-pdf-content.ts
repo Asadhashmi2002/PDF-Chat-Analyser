@@ -11,10 +11,10 @@
 
 import {z} from 'zod';
 
-// Free Groq AI for intelligent PDF analysis and vectorization
-const GROQ_API_KEY = process.env.GROQ_API_KEY || 'gsk_demo_key_placeholder';
+// Perplexity API for intelligent PDF analysis and vectorization (2025)
+const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 
-// Advanced text chunking for RAG (Retrieval-Augmented Generation)
+// Advanced text chunking for RAG (Retrieval-Augmented Generation) - 2025 Enhanced
 function createVectorChunks(text: string, chunkSize: number = 512, overlap: number = 128): string[] {
   const chunks: string[] = [];
   const words = text.split(/\s+/);
@@ -29,36 +29,42 @@ function createVectorChunks(text: string, chunkSize: number = 512, overlap: numb
   return chunks;
 }
 
-// Use Groq AI to intelligently structure and vectorize PDF content
-async function vectorizeWithGroqAI(text: string): Promise<string> {
+// Use Perplexity AI to intelligently structure and vectorize PDF content (2025 - Primary)
+async function vectorizeWithPerplexityAI(text: string): Promise<string> {
   try {
+    if (!PERPLEXITY_API_KEY) {
+      return text;
+    }
     
-    // Clean the text before sending to AI
     const cleanText = text
-      .replace(/[^\x20-\x7E]/g, '') // Remove non-printable characters
-      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/[^\x20-\x7E]/g, '')
+      .replace(/\s+/g, ' ')
       .trim();
     
     if (cleanText.length < 10) {
       return text;
     }
     
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${GROQ_API_KEY}`,
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'sonar',
         messages: [
           {
             role: 'system',
-            content: 'You are a document analysis expert. Extract and present the actual content from the document in a clean, readable format. Use clear headings without markdown syntax, bullet points for details, and focus on the real document content. Format like a professional document summary without ** or *** symbols.'
+            content: 'You are a document structuring expert. Clean, organize, and optimize document content. Preserve all factual information while improving readability.'
           },
           {
             role: 'user',
-            content: `Analyze and structure this document content for optimal readability and understanding. Clean up any formatting issues and organize the information clearly:\n\n${cleanText.substring(0, 3000)}`
+            content: `Structure this document content for optimal retrieval. Preserve all facts and data:
+
+${cleanText.substring(0, 50000)}
+
+Format the output as clean, well-organized text without markdown symbols. Focus on clarity and searchability.`
           }
         ],
         max_tokens: 1500,
@@ -70,20 +76,28 @@ async function vectorizeWithGroqAI(text: string): Promise<string> {
       const data = await response.json();
       const structured = data.choices?.[0]?.message?.content || cleanText;
       
-      // Clean the AI response to ensure it's readable
       const cleanStructured = structured
-        .replace(/[^\x20-\x7E]/g, '') // Remove any non-printable characters
-        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/[^\x20-\x7E]/g, '')
+        .replace(/\s+/g, ' ')
         .trim();
       
+      console.log('✓ Perplexity AI vectorization success');
       return cleanStructured;
     } else {
-      console.warn('Groq AI API error:', response.status, response.statusText);
+      console.warn('Perplexity AI vectorization error:', response.status);
       return cleanText;
     }
   } catch (error) {
     return text.replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim();
   }
+}
+
+// Local text cleaning (fallback when no AI available)
+function cleanTextLocally(text: string): string {
+  return text
+    .replace(/[^\x20-\x7E]/g, '') // Remove non-printable characters
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
 }
 
 // Enhanced local PDF processing
@@ -232,14 +246,24 @@ export async function vectorizePdfContent(input: VectorizePdfContentInput): Prom
     }
     
     
-    // Step 2: Create vector chunks for RAG
+    // Step 2: Create vector chunks for RAG (2025 Enhanced)
     const vectorChunks = createVectorChunks(extractedText);
+    console.log(`Created ${vectorChunks.length} RAG chunks for vectorization`);
     
-    // Step 3: Use Groq AI to intelligently structure the content
-    const vectorizedContent = await vectorizeWithGroqAI(extractedText);
+    // Step 3: Use Perplexity AI to structure content (Primary) or local fallback
+    let vectorizedContent = extractedText;
     
+    // Try Perplexity AI first (2025 Primary)
+    if (PERPLEXITY_API_KEY) {
+      console.log('Attempting Perplexity AI vectorization...');
+      vectorizedContent = await vectorizeWithPerplexityAI(extractedText);
+    } else {
+      console.log('⚠️ No Perplexity API key - using local text cleaning');
+      // Local fallback - just clean the text
+      vectorizedContent = cleanTextLocally(extractedText);
+    }
     
-    // Return vectorized content ready for Q&A
+    // Return vectorized content ready for RAG-powered Q&A
     return {
       markdownContent: vectorizedContent
     };

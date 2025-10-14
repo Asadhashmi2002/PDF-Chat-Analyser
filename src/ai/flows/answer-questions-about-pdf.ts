@@ -52,165 +52,103 @@ export async function answerQuestionsAboutPdf(input: AnswerQuestionsAboutPdfInpu
 
   try {
     console.log('Processing question with PDF text length:', cleanPdfText.length);
+    console.log('PDF text preview:', cleanPdfText.substring(0, 200));
+    console.log('Question:', question);
     
-    // Google NotebookLM-style AI integration using multiple providers
+    // Advanced RAG-powered AI integration using multiple providers (2025)
     
-    // Try Google Gemini first (like NotebookLM)
-    const geminiApiKey = process.env.GOOGLE_API_KEY;
-    if (geminiApiKey) {
+    // PRIMARY: Try Perplexity API first (most advanced for 2025)
+    const perplexityApiKey = process.env.PERPLEXITY_API_KEY;
+    if (perplexityApiKey) {
       try {
-        const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=${geminiApiKey}`, {
+        console.log('Attempting Perplexity API with RAG...');
+        const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
           method: 'POST',
           headers: {
+            'Authorization': `Bearer ${perplexityApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            contents: [{
-              parts: [{
-                        text: `Analyze this document and provide a comprehensive response:
+            model: 'sonar',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an expert document analyst. Extract and present ONLY exact information from the provided document. Be precise and cite specific sections when possible.'
+              },
+              {
+                role: 'user',
+                content: `Analyze this document and answer the question using ONLY information from the document:
 
-        DOCUMENT:
-        ${cleanPdfText}
-        
-        QUESTION: ${question}
-        
-        Format your response with:
-        - Clear headings for main topics (without ** symbols)
-        - Bullet points for key details
-        - Clean structure like a professional document summary
-        - Focus on the actual document content, not generic analysis
-        - Use clean formatting without markdown syntax`
-              }]
-            }],
-                    generationConfig: {
-                      temperature: 0.2,
-                      maxOutputTokens: 1500,
-                      topP: 0.8,
-                      topK: 10
-                    }
-          })
-        });
-
-        if (geminiResponse.ok) {
-          const geminiData = await geminiResponse.json();
-          const answer = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          
-                  if (answer.trim()) {
-                    
-                    // Clean up any remaining markdown syntax
-                    const cleanAnswer = answer
-                      .replace(/\*\*\*(.*?)\*\*\*/g, '$1') // Remove ***text*** 
-                      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove **text**
-                      .replace(/\*(.*?)\*/g, '$1') // Remove *text*
-                      .trim();
-                    
-                    return { answer: cleanAnswer };
-                  }
-        }
-              } catch (error) {
-      }
-    }
-
-    // Primary: Groq API with environment variable
-    const apiKey = process.env.GROQ_API_KEY || 'gsk_demo_key_placeholder';
-    
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-                model: 'llama-3.1-8b-instant',
-                messages: [
-                  {
-                    role: 'system',
-                    content: 'You are a document analysis expert. Extract and present the actual content from the document in a clean, readable format. Use clear headings without markdown syntax, bullet points for details, and focus on the real document content. Format like a professional document summary without ** or *** symbols.'
-                  },
-                  {
-                    role: 'user',
-                    content: `Analyze this document and provide a comprehensive response:
-
-        DOCUMENT:
-        ${cleanPdfText}
+DOCUMENT CONTENT:
+${cleanPdfText.substring(0, 100000)}
 
 QUESTION: ${question}
 
-Format your response with:
-- Clear headings for main topics (without ** symbols)
-- Bullet points for key details
-- Clean structure like a professional document summary
-- Focus on the actual document content, not generic analysis
-- Use clean formatting without markdown syntax`
-                  }
-                ],
-                max_tokens: 1500,
-                temperature: 0.2,
-      }),
-    });
+INSTRUCTIONS:
+- Quote exact text from the document
+- Provide specific citations if possible
+- If not found in document, say "Not found in document"
+- Do not add assumptions or external knowledge
+- Be precise and direct`
+              }
+            ],
+            max_tokens: 1000,
+            temperature: 0.1,
+          }),
+        });
 
-            if (!response.ok) {
-              const errorText = await response.text();
-      throw new Error(`Groq API failed: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    const answer = data.choices?.[0]?.message?.content;
-    
-    if (!answer || answer.trim().length === 0) {
-      throw new Error('Groq AI returned empty response');
-    }
-    
-
-            // Clean up any remaining markdown syntax
+        if (perplexityResponse.ok) {
+          const perplexityData = await perplexityResponse.json();
+          const answer = perplexityData.choices?.[0]?.message?.content || '';
+          
+          if (answer.trim()) {
+            console.log('✓ Perplexity API success');
+            
+            // Clean up response
             const cleanAnswer = answer
-              .replace(/\*\*\*(.*?)\*\*\*/g, '$1') // Remove ***text*** 
-              .replace(/\*\*(.*?)\*\*/g, '$1') // Remove **text**
-              .replace(/\*(.*?)\*/g, '$1') // Remove *text*
+              .replace(/\*\*\*(.*?)\*\*\*/g, '$1')
+              .replace(/\*\*(.*?)\*\*/g, '$1')
+              .replace(/\*(.*?)\*/g, '$1')
               .trim();
-
+            
             return { answer: cleanAnswer };
-          } catch (error) {
-            // Provide a detailed fallback response based on document content
+          }
+        } else {
+          const errorText = await perplexityResponse.text();
+          console.error('Perplexity API error:', perplexityResponse.status, errorText);
+        }
+      } catch (error) {
+        console.error('Perplexity API exception:', error);
+      }
+    }
     
-            // Extract key information from the document for a detailed response
-            const documentLines = cleanPdfText.split('\n').filter(line => line.trim().length > 0);
-            const keyInfo = documentLines.slice(0, 10).join(' ');
+    // Fallback: No other AI providers - only Perplexity
+    console.log('⚠️ Perplexity API not available - using fallback response');
     
+    // Extract key information from the document for a detailed response
+    const documentLines = cleanPdfText.split('\n').filter(line => line.trim().length > 0);
+    const keyInfo = documentLines.slice(0, 10).join(' ');
+
     return {
-      answer: `**Document Analysis Based on Content**
+      answer: `⚠️ **Perplexity API Required**
 
-**Document Content Analysis:**
-${keyInfo}
+**Issue:** No AI provider available for document analysis.
 
-        **Document Statistics:**
-        - **Length**: ${cleanPdfText.length} characters
-- **Structure**: Well-organized document with clear sections
-- **Content Type**: Structured information with specific data points
+**Solution:** Please configure your Perplexity API key to enable AI-powered analysis.
 
-**Key Information Extracted:**
-The document contains valuable information that can be analyzed in detail. Based on the content structure, here are the main findings:
+**Setup Instructions:**
+1. Get API key from: https://www.perplexity.ai/settings/api
+2. Add to environment: PERPLEXITY_API_KEY=your_key_here
+3. Restart the application
 
-**Content Breakdown:**
-1. **Primary Information**: ${keyInfo.substring(0, 200)}...
-2. **Data Points**: Multiple structured data points identified
-3. **Document Sections**: Clear organization with specific information
+**Document Preview:**
+${keyInfo.substring(0, 300)}...
 
-        **Analysis Capabilities:**
-        - Document contains ${cleanPdfText.length} characters of analyzable content
-- Multiple data points available for detailed analysis
-- Structured format enables comprehensive insights
+**Document Info:**
+- Length: ${cleanPdfText.length} characters
+- Content: ${keyInfo.substring(0, 200)}...
 
-**Next Steps:**
-Ask specific questions about particular sections, data points, or concepts within the document for detailed analysis.
-
-**Available for Analysis:**
-- Specific content sections
-- Data points and metrics
-- Key concepts and relationships
-- Detailed explanations and insights
-
-*This analysis is based on the actual document content. Ask specific questions for targeted insights.*`
+**Ready to analyze your document?** Configure Perplexity API to get started with intelligent document analysis.`
     };
   }
 }

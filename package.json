@@ -29,7 +29,9 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf .next out node_modules/.cache"
+    "clean": "rm -rf .next out node_modules/.cache",
+    "deploy": "netlify deploy --prod",
+    "deploy:preview": "netlify deploy"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.3",

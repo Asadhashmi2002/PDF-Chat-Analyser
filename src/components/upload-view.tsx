@@ -338,7 +338,7 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                       {uploadProgress < 50 ? "Preparing file..." : 
                        uploadProgress < 90 ? "Uploading to server..." : 
                        uploadProgress < 100 ? "Finalizing upload..." :
-                       "Server processing document..."}
+                       "Processing PDF with AI..."}
                     </p>
                   </div>
                 )}

@@ -9,7 +9,6 @@
  */
 
 import {z} from 'zod';
-const pdfParse = require('pdf-parse');
 
 // Perplexity API for intelligent PDF analysis and vectorization (2025)
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
@@ -60,10 +59,8 @@ async function extractTextAdvanced(pdfBuffer: Buffer): Promise<{
 
   try {
     // Method 1: pdf-parse (Primary - most reliable)
-    const pdfData = await pdfParse(pdfBuffer, {
-      max: 0, // No page limit
-      version: 'v1.10.100' // Latest version
-    });
+    const pdfParse = eval('require')('pdf-parse');
+    const pdfData = await pdfParse(pdfBuffer);
     
     extractedText = pdfData.text;
     metadata = {

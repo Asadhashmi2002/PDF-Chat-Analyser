@@ -100,19 +100,32 @@ export default function Home() {
         
         console.log('Server processing started...');
         
-        // Simulate server processing progress
+        // Calculate realistic processing time based on file size
+        const fileSizeMB = file.size / (1024 * 1024);
+        const estimatedProcessingTime = Math.max(3000, fileSizeMB * 1000); // At least 3 seconds, +1 second per MB
+        console.log(`File size: ${fileSizeMB.toFixed(2)}MB, estimated processing time: ${estimatedProcessingTime}ms`);
+        
+        // Simulate realistic server processing progress
         const serverProgressInterval = setInterval(() => {
           setServerProcessingProgress(prev => {
             if (prev >= 90) {
               clearInterval(serverProgressInterval);
               return 90;
             }
-            return prev + Math.random() * 15;
+            // Slower progress for larger files
+            const increment = fileSizeMB > 5 ? Math.random() * 5 : Math.random() * 10;
+            return prev + increment;
           });
-        }, 500);
+        }, Math.max(200, fileSizeMB * 50)); // Slower intervals for larger files
         
         console.log('Calling processPdf...');
-        const result = await processPdf({ pdfDataUri: dataUri });
+        
+        // Add minimum processing delay for realistic experience
+        const processingPromise = processPdf({ pdfDataUri: dataUri });
+        const delayPromise = new Promise(resolve => setTimeout(resolve, estimatedProcessingTime));
+        
+        // Wait for both processing and minimum time
+        const [result] = await Promise.all([processingPromise, delayPromise]);
         console.log('processPdf result:', result);
         
         // Complete server processing

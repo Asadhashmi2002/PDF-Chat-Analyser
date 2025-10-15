@@ -276,11 +276,16 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
     if (file) {
       // First upload the file, then start chat
       if (onUpload) {
-        const result = onUpload(file);
-        if (result instanceof Promise) {
-          await result;
+        try {
+          const result = onUpload(file);
+          if (result instanceof Promise) {
+            await result;
+          }
+        } catch (err) {
+          // Upload failed or was cancelled; do not start chat
+          return;
         }
-        // After upload, start chat
+        // After successful upload, start chat
         if (onStartChat) {
           onStartChat();
         }
@@ -332,10 +337,14 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
       } else {
         // External upload is being handled by parent
         if (onUpload) {
-          const uploadFn = onUpload as (file: File) => Promise<void> | void;
-          const result = uploadFn(file);
-          if (result instanceof Promise) {
-            await result;
+          try {
+            const uploadFn = onUpload as (file: File) => Promise<void> | void;
+            const result = uploadFn(file);
+            if (result instanceof Promise) {
+              await result;
+            }
+          } catch (err) {
+            // Parent-managed upload failed; rely on parent to show feedback
           }
         }
       }

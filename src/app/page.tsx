@@ -18,6 +18,7 @@ export default function Page() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [serverProcessingProgress, setServerProcessingProgress] = useState(0);
   const [isDocumentReady, setIsDocumentReady] = useState(false);
+  const [startChatQueued, setStartChatQueued] = useState(false);
   const { toast } = useToast();
 
   const handlePdfUpload = async (file: File) => {
@@ -28,7 +29,7 @@ export default function Page() {
         description: "Please upload a valid PDF file.",
         variant: 'destructive'
       });
-      return;
+      throw new Error('Invalid file type');
     }
 
     // File size validation (50MB limit)
@@ -39,7 +40,7 @@ export default function Page() {
         description: "File size exceeds 50MB limit. Please compress your PDF or use a smaller file.",
         variant: 'destructive'
       });
-      return;
+      throw new Error('File too large');
     }
 
     // Prevent multiple uploads
@@ -49,7 +50,7 @@ export default function Page() {
         description: "Please wait for the current upload to complete.",
         variant: 'destructive'
       });
-      return;
+      throw new Error('Upload already in progress');
     }
 
     // Professional upload process with real progress tracking
@@ -71,43 +72,48 @@ export default function Page() {
       const fileSize = file.size;
       const isLargeFile = fileSize > 20 * 1024 * 1024; // 20MB threshold
       
-      if (isLargeFile) {
-        // For large files, simulate realistic upload progress
-        let progress = 0;
-        const progressInterval = setInterval(() => {
-          progress += Math.random() * 3; // Slower progress for large files
-          if (progress >= 95) {
-            clearInterval(progressInterval);
-            setUploadProgress(95);
-            // Complete upload after a short delay
-            setTimeout(() => {
-              setUploadProgress(100);
-              setIsUploading(false);
-              setIsDocumentReady(true);
-              setPdfFile(file);
-              setPdfUrl(newPdfUrl);
-              
-              toast({
-                title: "Upload Complete",
-                description: `Large file (${(fileSize / (1024 * 1024)).toFixed(1)}MB) uploaded successfully.`,
-                variant: 'default'
-              });
-            }, 500);
-          } else {
-            setUploadProgress(Math.min(progress, 95));
-          }
-        }, 100);
-      } else {
-        // For smaller files, quick upload
-        setUploadProgress(50);
-        setTimeout(() => {
-          setUploadProgress(100);
-          setIsUploading(false);
-          setIsDocumentReady(true);
-          setPdfFile(file);
-          setPdfUrl(newPdfUrl);
-        }, 300);
-      }
+      // Ensure callers can await until upload completes to avoid races
+      await new Promise<void>((resolve) => {
+        if (isLargeFile) {
+          // For large files, simulate realistic upload progress
+          let progress = 0;
+          const progressInterval = setInterval(() => {
+            progress += Math.random() * 3; // Slower progress for large files
+            if (progress >= 95) {
+              clearInterval(progressInterval);
+              setUploadProgress(95);
+              // Complete upload after a short delay
+              setTimeout(() => {
+                setUploadProgress(100);
+                setIsUploading(false);
+                setIsDocumentReady(true);
+                setPdfFile(file);
+                setPdfUrl(newPdfUrl);
+                
+                toast({
+                  title: "Upload Complete",
+                  description: `Large file (${(fileSize / (1024 * 1024)).toFixed(1)}MB) uploaded successfully.`,
+                  variant: 'default'
+                });
+                resolve();
+              }, 500);
+            } else {
+              setUploadProgress(Math.min(progress, 95));
+            }
+          }, 100);
+        } else {
+          // For smaller files, quick upload
+          setUploadProgress(50);
+          setTimeout(() => {
+            setUploadProgress(100);
+            setIsUploading(false);
+            setIsDocumentReady(true);
+            setPdfFile(file);
+            setPdfUrl(newPdfUrl);
+            resolve();
+          }, 300);
+        }
+      });
 
     } catch (error) {
       // Professional error handling
@@ -124,20 +130,34 @@ export default function Page() {
     }
   };
 
-  const handleStartChat = async () => {
-    if (!pdfFile || !pdfUrl) {
-      return;
-    }
-    
+  const startChatNow = () => {
     // Go directly to chat without processing
     setPdfText("Document uploaded successfully. You can now ask questions about your PDF.");
     setIsProcessing(false);
     setIsServerProcessing(false);
     setIsDocumentReady(true);
-    
-    // Force immediate state update
     setShowHome(false);
   };
+
+  const handleStartChat = () => {
+    // If file/url already set, start immediately; otherwise queue
+    if (pdfFile && pdfUrl) {
+      startChatNow();
+    } else {
+      setStartChatQueued(true);
+    }
+  };
+
+  // Auto-start chat once upload state is ready after a queued request
+  // Ensures a single click is enough even if state hasn't flushed yet
+  // (common when awaiting async upload before state commit)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  require('react').useEffect(() => {
+    if (startChatQueued && pdfFile && pdfUrl) {
+      startChatNow();
+      setStartChatQueued(false);
+    }
+  }, [startChatQueued, pdfFile, pdfUrl]);
 
   const goToHome = () => {
     setPdfFile(null);
@@ -160,20 +180,8 @@ export default function Page() {
     return <HomePage onGetStarted={() => setShowHome(false)} />;
   }
 
-  if (!pdfFile || !pdfUrl) {
-    return <UploadView
-      onUpload={handlePdfUpload} 
-      isProcessing={isProcessing || isUploading || isServerProcessing} 
-      onGoHome={goToHome}
-      uploadProgress={isServerProcessing ? serverProcessingProgress : uploadProgress}
-      isUploading={isUploading || isServerProcessing}
-      isDocumentReady={isDocumentReady}
-      onStartChat={handleStartChat}
-    />;
-  }
-
-  // If we have pdfFile and pdfUrl but no pdfText, show upload view with start chat option
-  if (!pdfText) {
+  // Show upload view if no file is uploaded OR if file is uploaded but not processed yet
+  if (!pdfFile || !pdfUrl || !pdfText) {
     return <UploadView
       onUpload={handlePdfUpload} 
       isProcessing={isProcessing || isUploading || isServerProcessing} 

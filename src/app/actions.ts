@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { vectorizePdfContent } from '../ai/flows/vectorize-pdf-content';
+import { vectorizePdfContent, answerQuestionWithRAG } from '../ai/flows/vectorize-pdf-content';
 import { answerQuestionsAboutPdf } from '../ai/flows/answer-questions-about-pdf';
 
 const ProcessPdfInputSchema = z.object({
@@ -59,7 +59,25 @@ export async function askQuestion(input: { question: string; pdfContent: string 
   }
 
   try {
-    const { answer } = await answerQuestionsAboutPdf({ question: input.question, pdfText: input.pdfContent });
+    // Prefer RAG-based answering to minimize tokens and focus context
+    let answer: string | undefined;
+
+    try {
+      const ragAnswer = await answerQuestionWithRAG(input.question);
+      if (
+        ragAnswer &&
+        !ragAnswer.startsWith('RAG system not available') &&
+        !ragAnswer.startsWith('No relevant information found')
+      ) {
+        answer = ragAnswer;
+      }
+    } catch {}
+
+    // Fallback to provider-based QA over full text if RAG unavailable/insufficient
+    if (!answer) {
+      const direct = await answerQuestionsAboutPdf({ question: input.question, pdfText: input.pdfContent });
+      answer = direct.answer;
+    }
     
     if (!answer || answer.trim() === '') {
       return { error: 'AI returned an empty response.' };

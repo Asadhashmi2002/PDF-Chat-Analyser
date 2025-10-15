@@ -397,7 +397,7 @@ export default function HomePage({ onGetStarted }: HomePageProps) {
         
         <div className="container mx-auto px-4 text-center relative z-10">
           <p className="text-gray-400">
-            © 2024 PDF Chat Navigator. Built with Next.js, TypeScript, and AI.
+           © {new Date().getFullYear()} PDF Chat Analyser. Powered with AI.
           </p>
         </div>
       </footer>

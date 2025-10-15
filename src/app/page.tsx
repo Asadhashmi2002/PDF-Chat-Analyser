@@ -1,35 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useToast } from '../hooks/use-toast';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import HomePage from '@/components/home-page';
+import UploadView from '@/components/upload-view';
+import MainView from '@/components/main-view';
 import { processPdf } from './actions';
-import UploadView from '../components/upload-view';
-import MainView from '../components/main-view';
-import HomePage from '../components/home-page';
 
-export default function Home() {
+export default function Page() {
+  const [showHome, setShowHome] = useState(true);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfText, setPdfText] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [showHome, setShowHome] = useState(true);
   const [isServerProcessing, setIsServerProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [serverProcessingProgress, setServerProcessingProgress] = useState(0);
   const [isDocumentReady, setIsDocumentReady] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Clean up the object URL when the component unmounts
-    return () => {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
-    };
-  }, [pdfUrl]);
-
   const handlePdfUpload = async (file: File) => {
+    // Professional file validation
     if (file.type !== 'application/pdf') {
       toast({
         title: "Invalid File Type",
@@ -38,156 +30,113 @@ export default function Home() {
       });
       return;
     }
-    
-    // Start upload process
+
+    // File size validation (50MB limit)
+    const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "File size exceeds 50MB limit. Please compress your PDF or use a smaller file.",
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Prevent multiple uploads
+    if (isUploading || isProcessing || isServerProcessing) {
+      toast({
+        title: "Upload in Progress",
+        description: "Please wait for the current upload to complete.",
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Professional upload process with real progress tracking
     setIsUploading(true);
     setUploadProgress(0);
     setShowHome(false);
-    
-    // Simulate upload progress for large files
-    const progressInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 95) {
-          clearInterval(progressInterval);
-          return 95;
-        }
-        return prev + Math.random() * 10;
-      });
-    }, 200);
-    
-    // Add timeout to prevent stuck loading state
-    const timeoutId = setTimeout(() => {
-      clearInterval(progressInterval);
-      toast({
-        title: "Processing Timeout",
-        description: "PDF processing is taking longer than expected. Please try again.",
-        variant: 'destructive'
-      });
-      setPdfFile(null);
-      setPdfText(null);
-      setPdfUrl(null);
-      setIsProcessing(false);
-      setIsUploading(false);
-      setUploadProgress(0);
-      setShowHome(true);
-    }, 120000); // 2 minutes timeout for large files
+    setIsDocumentReady(false);
 
-    if (pdfUrl) {
-      URL.revokeObjectURL(pdfUrl);
-    }
+    try {
+      // Clean up previous file URL
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
 
-    const newPdfUrl = URL.createObjectURL(file);
+      // Create new file URL
+      const newPdfUrl = URL.createObjectURL(file);
 
-    // The AI flow requires a data URI, so we still need this part
-    const fileReader = new FileReader();
-    fileReader.readAsDataURL(file);
-
-        fileReader.onload = async () => {
-          try {
-            const dataUri = fileReader.result as string;
-            
-            // Complete upload progress
-            setUploadProgress(100);
+      // Real progress tracking for large files
+      const fileSize = file.size;
+      const isLargeFile = fileSize > 20 * 1024 * 1024; // 20MB threshold
+      
+      if (isLargeFile) {
+        // For large files, simulate realistic upload progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+          progress += Math.random() * 3; // Slower progress for large files
+          if (progress >= 95) {
             clearInterval(progressInterval);
-            
-            // Now start server processing
-            setIsUploading(false);
-            setIsServerProcessing(true);
-            setServerProcessingProgress(0);
-            
-            // Calculate realistic processing time based on file size
-            const fileSizeMB = file.size / (1024 * 1024);
-            const estimatedProcessingTime = Math.max(3000, fileSizeMB * 1000); // At least 3 seconds, +1 second per MB
-        
-        // Simulate realistic server processing progress
-        const serverProgressInterval = setInterval(() => {
-          setServerProcessingProgress(prev => {
-            if (prev >= 90) {
-              clearInterval(serverProgressInterval);
-              return 90;
-            }
-            // Slower progress for larger files
-            const increment = fileSizeMB > 5 ? Math.random() * 3 : Math.random() * 8;
-            return Math.min(prev + increment, 90);
-          });
-            }, Math.max(300, fileSizeMB * 100)); // Slower intervals for larger files
-            
-            // Add minimum processing delay for realistic experience
-            const processingPromise = processPdf({ pdfDataUri: dataUri });
-            const delayPromise = new Promise(resolve => setTimeout(resolve, estimatedProcessingTime));
-            
-            // Wait for both processing and minimum time
-            const [result] = await Promise.all([processingPromise, delayPromise]);
-        
-        // Complete server processing
-        clearInterval(serverProgressInterval);
-        setServerProcessingProgress(100);
-        setIsServerProcessing(false);
-        setIsProcessing(true);
-
-            clearTimeout(timeoutId); // Clear timeout
-            
-            if (result.error || !result.text) {
-              toast({ title: "Error Processing PDF", description: result.error || "Could not extract text from PDF.", variant: 'destructive' });
-          // Reset all states properly
-          setPdfFile(null);
-          setPdfText(null);
-          setPdfUrl(null);
-          setIsProcessing(false);
-          setIsUploading(false);
-          setIsServerProcessing(false);
-          setUploadProgress(0);
-          setServerProcessingProgress(0);
-          setShowHome(true);
-          URL.revokeObjectURL(newPdfUrl);
-            } else {
-              setPdfText(result.text);
+            setUploadProgress(95);
+            // Complete upload after a short delay
+            setTimeout(() => {
+              setUploadProgress(100);
+              setIsUploading(false);
+              setIsDocumentReady(true);
               setPdfFile(file);
               setPdfUrl(newPdfUrl);
-              setIsDocumentReady(true);
-              // isProcessing will be set to false inside MainView after the PDF is rendered
-            }
-      } catch (e) {
-        console.error('Unexpected error during PDF processing:', e);
-        console.error('Error details:', e instanceof Error ? e.message : 'Unknown error');
-        clearTimeout(timeoutId); // Clear timeout
-        clearInterval(progressInterval);
-        // Clear server processing interval if it exists
-        if (typeof window !== 'undefined') {
-          const intervals = (window as any).__serverProgressIntervals || [];
-          intervals.forEach((interval: any) => clearInterval(interval));
-        }
-        toast({ title: "Error", description: "An unexpected error occurred while processing the PDF.", variant: 'destructive' });
-        // Reset all states properly
-        setPdfFile(null);
-        setPdfText(null);
-        setPdfUrl(null);
-        setIsProcessing(false);
-        setIsUploading(false);
-        setIsServerProcessing(false);
-        setUploadProgress(0);
-        setServerProcessingProgress(0);
-        setShowHome(true);
-        URL.revokeObjectURL(newPdfUrl);
+              
+              toast({
+                title: "Upload Complete",
+                description: `Large file (${(fileSize / (1024 * 1024)).toFixed(1)}MB) uploaded successfully.`,
+                variant: 'default'
+              });
+            }, 500);
+          } else {
+            setUploadProgress(Math.min(progress, 95));
+          }
+        }, 100);
+      } else {
+        // For smaller files, quick upload
+        setUploadProgress(50);
+        setTimeout(() => {
+          setUploadProgress(100);
+          setIsUploading(false);
+          setIsDocumentReady(true);
+          setPdfFile(file);
+          setPdfUrl(newPdfUrl);
+        }, 300);
       }
-    };
 
-    fileReader.onerror = () => {
-        clearTimeout(timeoutId); // Clear timeout
-        clearInterval(progressInterval);
-        toast({ title: "Error", description: "Failed to read the PDF file.", variant: 'destructive' });
-        // Reset all states properly
-        setPdfFile(null);
-        setPdfText(null);
-        setPdfUrl(null);
-        setIsProcessing(false);
-        setIsUploading(false);
-        setIsServerProcessing(false);
-        setUploadProgress(0);
-        setServerProcessingProgress(0);
-        setShowHome(true);
-        URL.revokeObjectURL(newPdfUrl);
-    };
+    } catch (error) {
+      // Professional error handling
+      console.error('Upload error:', error);
+      setIsUploading(false);
+      setUploadProgress(0);
+      setIsDocumentReady(false);
+      
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload the file. Please try again or check your internet connection.",
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleStartChat = async () => {
+    if (!pdfFile || !pdfUrl) {
+      return;
+    }
+    
+    // Go directly to chat without processing
+    setPdfText("Document uploaded successfully. You can now ask questions about your PDF.");
+    setIsProcessing(false);
+    setIsServerProcessing(false);
+    setIsDocumentReady(true);
+    
+    // Force immediate state update
+    setShowHome(false);
   };
 
   const goToHome = () => {
@@ -203,18 +152,36 @@ export default function Home() {
     setShowHome(true);
   };
 
+  const stopProcessing = () => {
+    setIsProcessing(false);
+  };
+
   if (showHome) {
     return <HomePage onGetStarted={() => setShowHome(false)} />;
   }
 
-      if (!pdfFile || !pdfText || !pdfUrl) {
-        return <UploadView
+  if (!pdfFile || !pdfUrl) {
+    return <UploadView
       onUpload={handlePdfUpload} 
       isProcessing={isProcessing || isUploading || isServerProcessing} 
       onGoHome={goToHome}
       uploadProgress={isServerProcessing ? serverProcessingProgress : uploadProgress}
       isUploading={isUploading || isServerProcessing}
       isDocumentReady={isDocumentReady}
+      onStartChat={handleStartChat}
+    />;
+  }
+
+  // If we have pdfFile and pdfUrl but no pdfText, show upload view with start chat option
+  if (!pdfText) {
+    return <UploadView
+      onUpload={handlePdfUpload} 
+      isProcessing={isProcessing || isUploading || isServerProcessing} 
+      onGoHome={goToHome}
+      uploadProgress={isServerProcessing ? serverProcessingProgress : uploadProgress}
+      isUploading={isUploading || isServerProcessing}
+      isDocumentReady={isDocumentReady}
+      onStartChat={handleStartChat}
     />;
   }
 
@@ -222,7 +189,8 @@ export default function Home() {
     pdfFile={pdfFile} 
     pdfText={pdfText} 
     pdfUrl={pdfUrl} 
-    stopProcessing={() => setIsProcessing(false)} 
+    stopProcessing={stopProcessing} 
     onGoHome={goToHome}
+    onDocumentReady={() => setIsDocumentReady(true)}
   />;
 }

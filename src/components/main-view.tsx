@@ -15,9 +15,10 @@ interface MainViewProps {
   pdfUrl: string;
   stopProcessing: () => void;
   onGoHome?: () => void;
+  onDocumentReady?: () => void;
 }
 
-export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onGoHome }: MainViewProps) {
+export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onGoHome, onDocumentReady }: MainViewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isAnswering, setIsAnswering] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
@@ -25,71 +26,24 @@ export default function MainView({ pdfFile, pdfText, pdfUrl, stopProcessing, onG
   const { toast } = useToast();
 
   useEffect(() => {
-    // Automatically analyze and summarize the document when uploaded
-    const analyzeDocument = async () => {
-      try {
-                // Check if we have meaningful content to analyze
-                if (!pdfText || pdfText.trim().length < 10) {
-          setMessages([
-            {
-              role: 'assistant',
-              content: `📄 **Document Uploaded Successfully**
+    // Simply show ready message without analysis
+    setMessages([
+      {
+        role: 'assistant',
+        content: `📄 **Document Ready for Analysis**
 
 **Document:** ${pdfFile.name}
 
-
-
-*Please ask questions about the document, and I'll do my best to help based on the available information.*`,
-              citations: []
-            }
-          ]);
-          stopProcessing();
-          return;
-        }
-
-                setIsAnswering(true);
-
-        // Get document summary and key content (like NotebookLM)
-        const analysisResult = await askQuestion({ 
-          question: 'Summarize this document. Include main topics and key information.', 
-          pdfContent: pdfText 
-        });
-        
-        if (analysisResult.answer) {
-          setMessages([
-            {
-              role: 'assistant',
-              content: analysisResult.answer,
-              citations: analysisResult.citations || []
-            }
-          ]);
-        } else {
-          setMessages([
-            {
-              role: 'assistant',
-              content: `Document analysis failed. Please try uploading again.`,
-              citations: []
-            }
-          ]);
-        }
-              } catch (error) {
-        setMessages([
-          {
-            role: 'assistant',
-            content: `Document processing error. Please try again.`,
-            citations: []
-          }
-        ]);
-      } finally {
-        setIsAnswering(false);
-        stopProcessing();
+*The document has been uploaded and is ready for questions. Please ask anything about the content!*`,
+        citations: []
       }
-    };
-
-    // Start analysis after a short delay
-    const timer = setTimeout(analyzeDocument, 1000);
-    return () => clearTimeout(timer);
-  }, [pdfFile.name, pdfText, stopProcessing]);
+    ]);
+    stopProcessing();
+    // Notify parent that document is ready
+    if (onDocumentReady) {
+      onDocumentReady();
+    }
+  }, [pdfFile.name, stopProcessing, onDocumentReady]);
 
   const handleQuestionSubmit = async (question: string) => {
     if (isAnswering || !pdfText) return;

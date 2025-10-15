@@ -10,12 +10,13 @@ import { cn } from '../lib/utils';
 import { useToast } from '../hooks/use-toast';
 
 interface UploadViewProps {
-  onUpload: (file: File) => void;
+  onUpload: (file: File) => Promise<void> | void;
   isProcessing: boolean;
   onGoHome?: () => void;
   uploadProgress?: number;
   isUploading?: boolean;
   isDocumentReady?: boolean;
+  onStartChat?: () => void;
 }
 
 // File size limits and warnings
@@ -47,7 +48,7 @@ const processingSteps = [
   { text: 'Preparing the interactive session...', icon: Bot },
 ];
 
-export default function UploadView({ onUpload, isProcessing, onGoHome, uploadProgress: externalUploadProgress, isUploading: externalIsUploading, isDocumentReady = false }: UploadViewProps) {
+export default function UploadView({ onUpload, isProcessing, onGoHome, uploadProgress: externalUploadProgress, isUploading: externalIsUploading, isDocumentReady = false, onStartChat }: UploadViewProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -91,32 +92,82 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      // Validate file type
-      if (selectedFile.type !== 'application/pdf') {
+      // Professional file validation
+      try {
+        // Validate file type
+        if (selectedFile.type !== 'application/pdf') {
+          toast({
+            title: "Invalid File Type",
+            description: "Please upload a valid PDF file. Only PDF documents are supported.",
+            variant: 'destructive'
+          });
+          setFile(null);
+          e.target.value = '';
+          return;
+        }
+        
+        // Professional file size validation with detailed messages
+        const fileSizeMB = selectedFile.size / (1024 * 1024);
+        const maxSizeMB = MAX_FILE_SIZE / (1024 * 1024);
+        
+        if (selectedFile.size > MAX_FILE_SIZE) {
+          toast({
+            title: "File Too Large",
+            description: `File size (${fileSizeMB.toFixed(1)}MB) exceeds the ${maxSizeMB}MB limit. Please compress your PDF or use a smaller file.`,
+            variant: 'destructive'
+          });
+          setFile(null);
+          e.target.value = '';
+          return;
+        }
+
+        // Check for corrupted or empty files
+        if (selectedFile.size === 0) {
+          toast({
+            title: "Empty File",
+            description: "The selected file appears to be empty. Please choose a valid PDF file.",
+            variant: 'destructive'
+          });
+          setFile(null);
+          e.target.value = '';
+          return;
+        }
+
+        // Check for very small files (potential corruption) - adjusted for testing
+        if (selectedFile.size < 100) { // Less than 100 bytes
+          toast({
+            title: "Suspicious File Size",
+            description: "The file size is unusually small. Please ensure you've selected a valid PDF document.",
+            variant: 'destructive'
+          });
+          setFile(null);
+          e.target.value = '';
+          return;
+        }
+
+        // Professional success handling
+        setFile(selectedFile);
+        setFileSizeWarning(getFileSizeWarning(selectedFile.size));
+        
+        // Show success message for large files
+        if (selectedFile.size > 20 * 1024 * 1024) {
+          toast({
+            title: "Large File Detected",
+            description: `Large file (${fileSizeMB.toFixed(1)}MB) selected. Upload may take additional time.`,
+            variant: 'default'
+          });
+        }
+        
+      } catch (error) {
+        console.error('File validation error:', error);
         toast({
-          title: "Invalid File Type",
-          description: "Please upload a valid PDF file.",
+          title: "File Error",
+          description: "An error occurred while processing the file. Please try again.",
           variant: 'destructive'
         });
         setFile(null);
         e.target.value = '';
-        return;
       }
-      
-      // Validate file size
-      if (selectedFile.size > MAX_FILE_SIZE) {
-        toast({
-          title: "File Too Large",
-          description: `File size (${formatFileSize(selectedFile.size)}) exceeds the maximum limit of 50MB.`,
-          variant: 'destructive'
-        });
-        setFile(null);
-        e.target.value = '';
-        return;
-      }
-      
-      setFile(selectedFile);
-      setFileSizeWarning(getFileSizeWarning(selectedFile.size));
     }
   };
 
@@ -145,34 +196,97 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
     
     const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile) {
-      // Validate file type
-      if (droppedFile.type !== 'application/pdf') {
+      // Professional drag and drop validation
+      try {
+        // Validate file type
+        if (droppedFile.type !== 'application/pdf') {
+          toast({
+            title: "Invalid File Type",
+            description: "Please drop a valid PDF file. Only PDF documents are supported.",
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        // Professional file size validation
+        const fileSizeMB = droppedFile.size / (1024 * 1024);
+        const maxSizeMB = MAX_FILE_SIZE / (1024 * 1024);
+        
+        if (droppedFile.size > MAX_FILE_SIZE) {
+          toast({
+            title: "File Too Large",
+            description: `File size (${fileSizeMB.toFixed(1)}MB) exceeds the ${maxSizeMB}MB limit. Please compress your PDF or use a smaller file.`,
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        // Check for corrupted or empty files
+        if (droppedFile.size === 0) {
+          toast({
+            title: "Empty File",
+            description: "The dropped file appears to be empty. Please choose a valid PDF file.",
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        // Check for very small files (potential corruption) - adjusted for testing
+        if (droppedFile.size < 100) { // Less than 100 bytes
+          toast({
+            title: "Suspicious File Size",
+            description: "The file size is unusually small. Please ensure you've dropped a valid PDF document.",
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        // Professional success handling
+        setFile(droppedFile);
+        setFileSizeWarning(getFileSizeWarning(droppedFile.size));
+        
+        // Show success message for large files
+        if (droppedFile.size > 20 * 1024 * 1024) {
+          toast({
+            title: "Large File Detected",
+            description: `Large file (${fileSizeMB.toFixed(1)}MB) dropped. Upload may take additional time.`,
+            variant: 'default'
+          });
+        }
+        
+      } catch (error) {
+        console.error('Drag and drop validation error:', error);
         toast({
-          title: "Invalid File Type",
-          description: "Please drop a valid PDF file.",
+          title: "File Error",
+          description: "An error occurred while processing the dropped file. Please try again.",
           variant: 'destructive'
         });
-        return;
       }
-      
-      // Validate file size
-      if (droppedFile.size > MAX_FILE_SIZE) {
-        toast({
-          title: "File Too Large",
-          description: `File size (${formatFileSize(droppedFile.size)}) exceeds the maximum limit of 50MB.`,
-          variant: 'destructive'
-        });
-        return;
-      }
-      
-      setFile(droppedFile);
-      setFileSizeWarning(getFileSizeWarning(droppedFile.size));
     }
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    // Prevent rapid clicks
+    if (isProcessing || isUploading) {
+      return;
+    }
+    
     if (file) {
+      // First upload the file, then start chat
+      if (onUpload) {
+        const result = onUpload(file);
+        if (result instanceof Promise) {
+          await result;
+        }
+        // After upload, start chat
+        if (onStartChat) {
+          onStartChat();
+        }
+        return;
+      }
+      
       // Only handle internal upload if external upload is not being used
       if (!externalIsUploading) {
         setInternalIsUploading(true);
@@ -189,9 +303,15 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
           });
         }, 300);
         
-            try {
-              // Call the actual upload function
-              await onUpload(file);
+        try {
+          // Call the actual upload function
+          if (onUpload) {
+            const uploadFn = onUpload as (file: File) => Promise<void> | void;
+            const result = uploadFn(file);
+            if (result instanceof Promise) {
+              await result;
+            }
+          }
           
           // Complete the progress
           setInternalUploadProgress(100);
@@ -209,10 +329,16 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
             variant: 'destructive'
           });
         }
-          } else {
-            // External upload is being handled by parent
-            await onUpload(file);
+      } else {
+        // External upload is being handled by parent
+        if (onUpload) {
+          const uploadFn = onUpload as (file: File) => Promise<void> | void;
+          const result = uploadFn(file);
+          if (result instanceof Promise) {
+            await result;
           }
+        }
+      }
     }
   };
 
@@ -324,49 +450,73 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                   />
                 </div>
 
-                {/* Upload Progress */}
+                {/* Professional Upload Progress */}
                 {isUploading && (
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center justify-between text-sm text-gray-400">
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        {uploadProgress < 100 ? "Uploading file..." : "Processing on server..."}
-                      </span>
-                      <span className="font-medium text-blue-400">{Math.round(uploadProgress)}%</span>
+                  <div className="space-y-4 mb-4 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                          <div className="absolute inset-0 w-5 h-5 border-2 border-blue-400/20 rounded-full"></div>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-200">
+                            {uploadProgress < 20 ? "Preparing file..." : 
+                             uploadProgress < 50 ? "Uploading to server..." : 
+                             uploadProgress < 80 ? "Processing large file..." :
+                             uploadProgress < 95 ? "Finalizing upload..." :
+                             "Completing upload..."}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {file && `Uploading ${file.name} (${formatFileSize(file.size)})`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-blue-400">{Math.round(uploadProgress)}%</span>
+                        <p className="text-xs text-gray-400">Complete</p>
+                      </div>
                     </div>
-                    <Progress value={uploadProgress} className="w-full h-2" />
-                    <p className="text-xs text-gray-500 text-center">
-                      {uploadProgress < 30 ? "Preparing file for upload..." : 
-                       uploadProgress < 70 ? "Uploading to server..." : 
-                       uploadProgress < 90 ? "Finalizing upload..." :
-                       uploadProgress < 100 ? "Completing upload..." :
-                       "Processing PDF with AI..."}
-                    </p>
+                    
+                    {/* Professional Progress Bar */}
+                    <div className="relative">
+                      <div className="w-full bg-gray-700 rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300 ease-out"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                      {/* Progress indicators */}
+                      <div className="flex justify-between mt-2">
+                        <span className="text-xs text-gray-400">0%</span>
+                        <span className="text-xs text-gray-400">50%</span>
+                        <span className="text-xs text-gray-400">100%</span>
+                      </div>
+                    </div>
+
+                    {/* Upload status message */}
+                    <div className="text-center">
+                      <p className="text-xs text-gray-400">
+                        {uploadProgress < 30 ? "Validating file format and size..." : 
+                         uploadProgress < 60 ? "Transferring data to server..." : 
+                         uploadProgress < 90 ? "Optimizing for processing..." :
+                         "Preparing for analysis..."}
+                      </p>
+                      {file && file.size > 20 * 1024 * 1024 && (
+                        <p className="text-xs text-yellow-400 mt-1">
+                          Large file detected - this may take a few moments
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {/* Document Ready Progress - Only show when document is uploaded but not yet ready */}
-                {!isUploading && !isProcessing && !isDocumentReady && file && (
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center justify-between text-sm text-gray-400">
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Preparing Document...
-                      </span>
-                      <span className="font-medium text-green-400">100%</span>
-                    </div>
-                    <Progress value={100} className="w-full h-2" />
-                    <p className="text-xs text-gray-500 text-center">
-                      Document uploaded successfully, preparing for analysis...
-                    </p>
-                  </div>
-                )}
 
                 <Button 
                   type="submit" 
                   size="lg" 
                   className="w-full text-sm sm:text-base font-semibold group bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg transition-transform duration-200 ease-in-out hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100" 
-                      disabled={!file || isProcessing || isUploading}
+                      disabled={!file || isUploading}
                 >
                   {isUploading ? (
                     <>
@@ -378,10 +528,16 @@ export default function UploadView({ onUpload, isProcessing, onGoHome, uploadPro
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
                       Processing...
                     </>
-                  ) : (
+                  ) : file ? (
                     <>
                       <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-green-400" />
                       Start Chatting
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-green-400" />
+                      Upload PDF
                       <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
                     </>
                   )}

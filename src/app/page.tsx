@@ -132,19 +132,71 @@ export default function Page() {
 
   const startChatNow = () => {
     // Go directly to chat without processing
-    setPdfText("Document uploaded successfully. You can now ask questions about your PDF.");
     setIsProcessing(false);
     setIsServerProcessing(false);
     setIsDocumentReady(true);
     setShowHome(false);
   };
 
-  const handleStartChat = () => {
-    // If file/url already set, start immediately; otherwise queue
-    if (pdfFile && pdfUrl) {
-      startChatNow();
-    } else {
+  // Convert a File to a data URI for server processing
+  const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleStartChat = async () => {
+    // If upload not ready, queue the start
+    if (!pdfFile || !pdfUrl) {
       setStartChatQueued(true);
+      return;
+    }
+
+    // If we already have extracted text, start immediately
+    if (pdfText && pdfText.trim().length > 0) {
+      startChatNow();
+      return;
+    }
+
+    // Extract PDF content on server before starting chat
+    if (isServerProcessing) return; // guard against double clicks
+    setIsServerProcessing(true);
+    setServerProcessingProgress(0);
+
+    // Simulate progress while server action runs
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress = Math.min(95, progress + 3 + Math.random() * 5);
+      setServerProcessingProgress(progress);
+    }, 200);
+
+    try {
+      const dataUri = await fileToDataUri(pdfFile);
+      const result = await processPdf({ pdfDataUri: dataUri });
+
+      if (result.error || !result.text) {
+        throw new Error(result.error || 'Failed to extract PDF text');
+      }
+
+      setPdfText(result.text);
+      setServerProcessingProgress(100);
+      clearInterval(interval);
+      setIsServerProcessing(false);
+
+      // Now that content is ready, start chat
+      startChatNow();
+    } catch (err: any) {
+      clearInterval(interval);
+      setIsServerProcessing(false);
+      setServerProcessingProgress(0);
+      toast({
+        title: 'Processing Failed',
+        description: err?.message || 'Could not process the PDF. Please try another file.',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -153,10 +205,12 @@ export default function Page() {
   // (common when awaiting async upload before state commit)
   // eslint-disable-next-line react-hooks/rules-of-hooks
   require('react').useEffect(() => {
-    if (startChatQueued && pdfFile && pdfUrl) {
-      startChatNow();
-      setStartChatQueued(false);
-    }
+    (async () => {
+      if (startChatQueued && pdfFile && pdfUrl) {
+        setStartChatQueued(false);
+        await handleStartChat();
+      }
+    })();
   }, [startChatQueued, pdfFile, pdfUrl]);
 
   const goToHome = () => {

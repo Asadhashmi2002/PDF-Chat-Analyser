@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import HomePage from '@/components/home-page';
 import UploadView from '@/components/upload-view';
@@ -19,7 +19,13 @@ export default function Page() {
   const [serverProcessingProgress, setServerProcessingProgress] = useState(0);
   const [isDocumentReady, setIsDocumentReady] = useState(false);
   const [startChatQueued, setStartChatQueued] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
+
+  // Ensure client-side rendering to prevent hydration mismatches
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handlePdfUpload = async (file: File) => {
     // Professional file validation
@@ -169,7 +175,7 @@ export default function Page() {
     // Simulate progress while server action runs
     let progress = 0;
     const interval = setInterval(() => {
-      progress = Math.min(95, progress + 3 + Math.random() * 5);
+      progress = Math.min(95, progress + 4); // Fixed increment to prevent hydration mismatch
       setServerProcessingProgress(progress);
     }, 200);
 
@@ -203,8 +209,7 @@ export default function Page() {
   // Auto-start chat once upload state is ready after a queued request
   // Ensures a single click is enough even if state hasn't flushed yet
   // (common when awaiting async upload before state commit)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  require('react').useEffect(() => {
+  useEffect(() => {
     (async () => {
       if (startChatQueued && pdfFile && pdfUrl) {
         setStartChatQueued(false);
@@ -229,6 +234,13 @@ export default function Page() {
   const stopProcessing = () => {
     setIsProcessing(false);
   };
+
+  // Prevent hydration mismatch by not rendering until client-side
+  if (!isClient) {
+    return <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+    </div>;
+  }
 
   if (showHome) {
     return <HomePage onGetStarted={() => setShowHome(false)} />;

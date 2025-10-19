@@ -3,8 +3,8 @@ services:
     name: pdf-chat-analyser
     env: node
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: bash render-build.sh
+    startCommand: mkdir -p temp && npm start
     envVars:
       - key: NODE_ENV
         value: production

@@ -1,10 +1,9 @@
 services:
   - type: web
     name: pdf-chat-analyser
-    env: node
+    env: docker
     plan: free
-    buildCommand: bash render-build.sh
-    startCommand: mkdir -p temp && npm start
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production

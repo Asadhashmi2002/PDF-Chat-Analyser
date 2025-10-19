@@ -5,7 +5,6 @@ import { useToast } from '@/hooks/use-toast';
 import HomePage from '@/components/home-page';
 import UploadView from '@/components/upload-view';
 import MainView from '@/components/main-view';
-import { processPdf } from './actions';
 
 export default function Page() {
   const [showHome, setShowHome] = useState(true);
@@ -154,16 +153,6 @@ export default function Page() {
     setShowHome(false);
   };
 
-  // Convert a File to a data URI for server processing
-  const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleStartChat = async () => {
     if (!pdfFile || !pdfUrl) {
       setStartChatQueued(true);
@@ -206,17 +195,26 @@ export default function Page() {
         throw new Error('No readable text could be extracted from this PDF.');
       }
 
-      setServerProcessingProgress(prev => (prev < 75 ? 75 : prev));
+      setServerProcessingProgress(prev => (prev < 70 ? 70 : prev));
 
-      const dataUri = await fileToDataUri(pdfFile);
-      const result = await processPdf({ pdfDataUri: dataUri, clientExtractedText: extractedText });
-
-      if (result.error || !result.text) {
-        throw new Error(result.error || 'Failed to process PDF content.');
+      const formData = new FormData();
+      formData.append('file', pdfFile, pdfFile.name || 'document.pdf');
+      if (extractedText) {
+        formData.append('clientExtractedText', extractedText);
       }
 
-      setPdfText(result.text);
-      clientExtractedTextRef.current = result.text;
+      const response = await fetch('/api/process-pdf', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload?.text) {
+        throw new Error(payload?.error || 'Failed to process PDF content.');
+      }
+
+      setPdfText(payload.text);
+      clientExtractedTextRef.current = payload.text;
       setServerProcessingProgress(100);
       setIsServerProcessing(false);
       setHasVectorized(true);

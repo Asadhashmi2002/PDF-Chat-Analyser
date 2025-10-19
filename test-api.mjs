@@ -69,34 +69,28 @@ async function testPdfProcessing(pdfDataUri) {
   try {
     logInfo('Processing PDF file...');
     
-    // Import the processPdf function
-    const { processPdf } = await import('./src/app/actions.ts');
+    // Import vectorization flow directly
+    const { vectorizePdfContent } = await import('./src/ai/flows/vectorize-pdf-content.ts');
     
     const startTime = Date.now();
-    const result = await processPdf({ pdfDataUri });
+    const result = await vectorizePdfContent({ pdfDataUri });
     const duration = Date.now() - startTime;
     
-    if (result.error) {
-      logError(`PDF Processing failed: ${result.error}`);
-      return null;
-    }
-    
-    if (result.text) {
+    if (result?.markdownContent) {
       logSuccess(`PDF processed successfully in ${duration}ms`);
-      logInfo(`Extracted text length: ${result.text.length} characters`);
+      logInfo(`Extracted text length: ${result.markdownContent.length} characters`);
       
-      // Display first 200 characters
-      const preview = result.text.substring(0, 200);
+      const preview = result.markdownContent.substring(0, 200);
       console.log('\nExtracted Text Preview:');
       console.log('-'.repeat(60));
       log(preview, colors.cyan);
       console.log('-'.repeat(60));
       
-      return result.text;
-    } else {
-      logError('PDF Processing returned no text');
-      return null;
+      return result.markdownContent;
     }
+
+    logError('PDF Processing returned no text');
+    return null;
   } catch (error) {
     logError(`PDF Processing error: ${error.message}`);
     console.error(error);

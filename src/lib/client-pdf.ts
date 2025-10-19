@@ -22,10 +22,7 @@ export interface ExtractionResult {
 }
 
 const TESSERACT_VERSION = '5.0.4';
-const PDFJS_FALLBACK_VERSION = '4.0.379';
-
-const getPdfWorkerSrc = (pdfjsVersion: string | undefined) =>
-  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion || PDFJS_FALLBACK_VERSION}/pdf.worker.min.js`;
+const DEFAULT_PDFJS_VERSION = '4.10.38';
 
 const OCR_WORKER_PATH = `https://unpkg.com/tesseract.js@${TESSERACT_VERSION}/dist/worker.min.js`;
 const OCR_CORE_PATH = `https://unpkg.com/tesseract.js-core@${TESSERACT_VERSION}/tesseract-core.wasm.js`;
@@ -38,6 +35,46 @@ function cleanExtractedText(text: string): string {
     .replace(CLEAN_TEXT_REGEX, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+let cachedWorkerSrc: string | null = null;
+
+async function ensurePdfWorker(pdfjs: any) {
+  if (cachedWorkerSrc) {
+    pdfjs.GlobalWorkerOptions.workerSrc = cachedWorkerSrc;
+    return;
+  }
+
+  try {
+    // Prefer bundler-provided asset so the worker is served from the same origin.
+    // @ts-ignore - bundler converts ?url import into a string at build time.
+    const workerModule: any = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+    cachedWorkerSrc = workerModule?.default ?? workerModule;
+    if (cachedWorkerSrc) {
+      pdfjs.GlobalWorkerOptions.workerSrc = cachedWorkerSrc;
+      return;
+    }
+  } catch (error) {
+    console.warn('Failed to load pdf.js worker via bundled asset, falling back to CDN source.', error);
+  }
+
+  try {
+    // Fetch worker source and create a blob URL (kept for the session).
+    const version = pdfjs?.version || DEFAULT_PDFJS_VERSION;
+    const response = await fetch(`https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.min.mjs`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch worker script: HTTP ${response.status}`);
+    }
+    const source = await response.text();
+    const blobUrl = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+    cachedWorkerSrc = blobUrl;
+    pdfjs.GlobalWorkerOptions.workerSrc = blobUrl;
+  } catch (error) {
+    console.error('Unable to prepare pdf.js worker. Falling back to single-threaded mode.', error);
+    cachedWorkerSrc = null;
+    pdfjs.GlobalWorkerOptions.workerSrc = null;
+    (pdfjs as any).disableWorker = true;
+  }
 }
 
 async function renderPageToCanvas(page: any, scale = 2): Promise<string> {
@@ -76,11 +113,7 @@ export async function extractPdfTextClient(
   const arrayBuffer = await file.arrayBuffer();
 
   const pdfjs = (await import('pdfjs-dist')) as any;
-  const pdfjsVersion: string | undefined = pdfjs?.version;
-
-  if (pdfjs?.GlobalWorkerOptions) {
-    pdfjs.GlobalWorkerOptions.workerSrc = getPdfWorkerSrc(pdfjsVersion);
-  }
+  await ensurePdfWorker(pdfjs);
 
   const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
   const pdf = await loadingTask.promise;

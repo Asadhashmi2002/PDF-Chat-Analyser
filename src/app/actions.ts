@@ -6,10 +6,10 @@ import { answerQuestionsAboutPdf } from '../ai/flows/answer-questions-about-pdf'
 
 const ProcessPdfInputSchema = z.object({
   pdfDataUri: z.string().startsWith('data:application/pdf;base64,'),
+  clientExtractedText: z.string().min(1).optional(),
 });
 
-export async function processPdf(input: { pdfDataUri: string }): Promise<{ text?: string, error?: string }> {
-  
+export async function processPdf(input: { pdfDataUri: string; clientExtractedText?: string }): Promise<{ text?: string, error?: string }> {
   const validation = ProcessPdfInputSchema.safeParse(input);
   if (!validation.success) {
     console.error('PDF validation failed:', validation.error);
@@ -17,7 +17,10 @@ export async function processPdf(input: { pdfDataUri: string }): Promise<{ text?
   }
 
   try {
-    const { markdownContent } = await vectorizePdfContent({ pdfDataUri: input.pdfDataUri });
+    const cleanClientText = input.clientExtractedText
+      ? input.clientExtractedText.replace(/[^\x20-\x7E]/g, ' ').replace(/\s+/g, ' ').trim()
+      : undefined;
+    const { markdownContent } = await vectorizePdfContent({ pdfDataUri: input.pdfDataUri, clientExtractedText: cleanClientText });
     return { text: markdownContent };
   } catch (e: any) {
     console.error('PDF processing error:', e);

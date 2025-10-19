@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import HomePage from '@/components/home-page';
 import UploadView from '@/components/upload-view';
@@ -20,6 +20,8 @@ export default function Page() {
   const [isDocumentReady, setIsDocumentReady] = useState(false);
   const [startChatQueued, setStartChatQueued] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [hasVectorized, setHasVectorized] = useState(false);
+  const clientExtractedTextRef = useRef<string | null>(null);
   const { toast } = useToast();
 
   // Ensure client-side rendering to prevent hydration mismatches
@@ -91,16 +93,18 @@ export default function Page() {
               // Complete upload after a short delay
               setTimeout(() => {
                 setUploadProgress(100);
-                setIsUploading(false);
-                setIsDocumentReady(true);
-                setPdfFile(file);
-                setPdfUrl(newPdfUrl);
-                
-                toast({
-                  title: "Upload Complete",
-                  description: `Large file (${(fileSize / (1024 * 1024)).toFixed(1)}MB) uploaded successfully.`,
-                  variant: 'default'
-                });
+              setIsUploading(false);
+              setIsDocumentReady(true);
+              setPdfFile(file);
+              setPdfUrl(newPdfUrl);
+              setPdfText(null);
+              setHasVectorized(false);
+              clientExtractedTextRef.current = null;
+              toast({
+                title: "Upload Complete",
+                description: `Large file (${(fileSize / (1024 * 1024)).toFixed(1)}MB) uploaded successfully.`,
+                variant: 'default'
+              });
                 resolve();
               }, 500);
             } else {
@@ -116,6 +120,9 @@ export default function Page() {
             setIsDocumentReady(true);
             setPdfFile(file);
             setPdfUrl(newPdfUrl);
+            setPdfText(null);
+            setHasVectorized(false);
+            clientExtractedTextRef.current = null;
             resolve();
           }, 300);
         }
@@ -127,6 +134,9 @@ export default function Page() {
       setIsUploading(false);
       setUploadProgress(0);
       setIsDocumentReady(false);
+      setPdfText(null);
+      setHasVectorized(false);
+      clientExtractedTextRef.current = null;
       
       toast({
         title: "Upload Failed",
@@ -155,54 +165,81 @@ export default function Page() {
   };
 
   const handleStartChat = async () => {
-    // If upload not ready, queue the start
     if (!pdfFile || !pdfUrl) {
       setStartChatQueued(true);
       return;
     }
 
-    // If we already have extracted text, start immediately
-    if (pdfText && pdfText.trim().length > 0) {
+    if (hasVectorized && pdfText && pdfText.trim().length > 0) {
       startChatNow();
       return;
     }
 
-    // Extract PDF content on server before starting chat
-    if (isServerProcessing) return; // guard against double clicks
-    setIsServerProcessing(true);
-    setServerProcessingProgress(0);
+    if (isServerProcessing) return;
 
-    // Simulate progress while server action runs
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress = Math.min(95, progress + 4); // Fixed increment to prevent hydration mismatch
-      setServerProcessingProgress(progress);
-    }, 200);
+    setIsServerProcessing(true);
+    setServerProcessingProgress(5);
 
     try {
+      let extractedText = clientExtractedTextRef.current || '';
+
+      if (!extractedText) {
+        const { extractPdfTextClient } = await import('@/lib/client-pdf');
+        const extraction = await extractPdfTextClient(pdfFile, ({ page, totalPages, mode }) => {
+          const base = mode === 'text' ? 5 : 55;
+          const span = mode === 'text' ? 45 : 30;
+          const progress = base + Math.round((page / totalPages) * span);
+          setServerProcessingProgress(Math.min(progress, 90));
+        });
+
+        extractedText = extraction.text;
+        clientExtractedTextRef.current = extraction.text;
+        if (extraction.usedOcr) {
+          toast({
+            title: 'OCR Applied',
+            description: 'This PDF appears to be image-based. Text was extracted using OCR before analysis.',
+          });
+        }
+      }
+
+      if (!extractedText || extractedText.trim().length === 0) {
+        throw new Error('No readable text could be extracted from this PDF.');
+      }
+
+      setServerProcessingProgress(prev => (prev < 75 ? 75 : prev));
+
       const dataUri = await fileToDataUri(pdfFile);
-      const result = await processPdf({ pdfDataUri: dataUri });
+      const result = await processPdf({ pdfDataUri: dataUri, clientExtractedText: extractedText });
 
       if (result.error || !result.text) {
-        throw new Error(result.error || 'Failed to extract PDF text');
+        throw new Error(result.error || 'Failed to process PDF content.');
       }
 
       setPdfText(result.text);
+      clientExtractedTextRef.current = result.text;
       setServerProcessingProgress(100);
-      clearInterval(interval);
       setIsServerProcessing(false);
-
-      // Now that content is ready, start chat
+      setHasVectorized(true);
       startChatNow();
     } catch (err: any) {
-      clearInterval(interval);
       setIsServerProcessing(false);
       setServerProcessingProgress(0);
-      toast({
-        title: 'Processing Failed',
-        description: err?.message || 'Could not process the PDF. Please try another file.',
-        variant: 'destructive'
-      });
+
+      if ((!pdfText || pdfText.trim().length === 0) && clientExtractedTextRef.current) {
+        setPdfText(clientExtractedTextRef.current);
+        toast({
+          title: 'Limited Mode Enabled',
+          description: 'We extracted the PDF text locally, but server-side analysis failed. You can continue chatting, but citations and vector search may be unavailable.',
+        });
+        setHasVectorized(false);
+        startChatNow();
+      } else {
+        toast({
+          title: 'Processing Failed',
+          description: err?.message || 'Could not process the PDF. Please try another file.',
+          variant: 'destructive'
+        });
+      }
     }
   };
 
@@ -228,6 +265,8 @@ export default function Page() {
     setUploadProgress(0);
     setServerProcessingProgress(0);
     setIsDocumentReady(false);
+    setHasVectorized(false);
+    clientExtractedTextRef.current = null;
     setShowHome(true);
   };
 

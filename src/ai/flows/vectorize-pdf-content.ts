@@ -557,12 +557,74 @@ function cleanTextLocally(text: string): string {
     .trim();
 }
 
+async function getPdfMetadataOnly(pdfBuffer: Buffer): Promise<{
+  pages: number;
+  title?: string;
+  author?: string;
+  subject?: string;
+  creator?: string;
+  producer?: string;
+  creationDate?: string;
+  modificationDate?: string;
+}> {
+  try {
+    const { PDFDocument } = await import('pdf-lib');
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const toIso = (date: any) => (date instanceof Date ? date.toISOString() : undefined);
+
+    return {
+      pages: pdfDoc.getPageCount(),
+      title: pdfDoc.getTitle() || undefined,
+      author: pdfDoc.getAuthor() || undefined,
+      subject: pdfDoc.getSubject() || undefined,
+      creator: pdfDoc.getCreator() || undefined,
+      producer: pdfDoc.getProducer() || undefined,
+      creationDate: toIso(pdfDoc.getCreationDate?.()),
+      modificationDate: toIso(pdfDoc.getModificationDate?.()),
+    };
+  } catch (error) {
+    console.warn('Failed to read PDF metadata via pdf-lib:', error);
+    return {
+      pages: 0,
+    };
+  }
+}
+
+function buildStructureFromPlainText(text: string) {
+  const lines = text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  const headings = lines
+    .filter(line => line.length <= 80 && /^[A-Z0-9][A-Z0-9\s:'",/&()-]*$/.test(line))
+    .slice(0, 20);
+
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map(section => section.trim())
+    .filter(section => section.length > 40)
+    .slice(0, 20);
+
+  const lists = lines
+    .filter(line => /^[-*]\s+/.test(line) || /^\d+[\.)]\s+/.test(line))
+    .slice(0, 20);
+
+  return {
+    headings,
+    paragraphs,
+    lists,
+    tables: [] as string[],
+  };
+}
+
 const VectorizePdfContentInputSchema = z.object({
   pdfDataUri: z
     .string()
     .describe(
       'A PDF document as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'  
     ),
+  clientExtractedText: z.string().optional(),
 });
 export type VectorizePdfContentInput = z.infer<typeof VectorizePdfContentInputSchema>;
 
@@ -596,12 +658,29 @@ export async function vectorizePdfContent(input: VectorizePdfContentInput): Prom
 
     console.log('📄 PDF validation passed, starting advanced extraction...');
 
+    const providedClientText = typeof input.clientExtractedText === 'string'
+      ? input.clientExtractedText.replace(/[^\x20-\x7E]/g, ' ').replace(/\s+/g, ' ').trim()
+      : '';
+
     // Step 1: Advanced PDF text extraction with metadata and structure analysis
-    const extractionResult = await extractTextAdvanced(pdfBuffer);
+    const extractionResult = providedClientText
+      ? {
+          text: providedClientText,
+          metadata: await getPdfMetadataOnly(pdfBuffer),
+          structure: buildStructureFromPlainText(providedClientText),
+        }
+      : await extractTextAdvanced(pdfBuffer);
     const { text: extractedText, metadata, structure } = extractionResult;
     
     if (!extractedText || extractedText.trim().length < 10) {
       throw new Error(`PDF text extraction failed. Document analysis indicates: ${extractedText.length} characters extracted, which is insufficient for processing. This PDF may be image-based (requiring OCR), password-protected, or contain corrupted text streams. Please try a different PDF file or use a text-based PDF document.`);
+    }
+
+    if (!metadata || typeof metadata !== 'object') {
+      metadata = await getPdfMetadataOnly(pdfBuffer);
+    }
+    if (!metadata.pages || metadata.pages < 1) {
+      metadata.pages = Math.max(1, providedClientText ? Math.round(extractedText.length / 1500) : 1);
     }
 
     console.log(`✅ Extracted ${extractedText.length} characters from ${metadata.pages} pages`);
